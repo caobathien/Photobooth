@@ -18,6 +18,11 @@
     <link rel="shortcut icon" href="./LOGO.png" type="image/x-icon">
     
     <link rel="stylesheet" href="./style.css">
+    
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+    <!-- GIF.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js" defer></script>
 </head>
 <body>
     <!-- Audio Elements -->
@@ -292,42 +297,89 @@
                         <div class="sticker-grid" id="stickerList">
                             <!-- JS will generate stickers -->
                         </div>
-                        <div class="element-controls hidden" id="elementControls">
-                            <button class="btn-icon danger" onclick="deleteSelectedElement()"><i class="ph ph-trash"></i> Xóa phần tử đang chọn</button>
-                        </div>
                     </div>
 
                     <div class="tab-content" id="tab-text">
                         <h4>Thêm chữ</h4>
                         <div class="text-input-group">
-                            <input type="text" id="textInput" placeholder="Nhập chữ của bạn..." oninput="updateSelectedTextProperty('content', this.value)">
-                            <select id="fontSelect" onchange="updateSelectedTextProperty('font', this.value)">
-                                <option value="Syne">Syne (Mặc định)</option>
-                                <option value="DM Sans">DM Sans (Cơ bản)</option>
-                                <option value="Montserrat">Montserrat (Hiện đại)</option>
-                                <option value="Playfair Display">Playfair (Thanh lịch)</option>
-                                <option value="Pacifico">Pacifico (Tay viết mềm)</option>
-                                <option value="Dancing Script">Dancing Script (Mềm mại)</option>
-                                <option value="Caveat">Caveat (Ghi chú)</option>
-                                <option value="Satisfy">Satisfy (Ký tên)</option>
-                                <option value="Bebas Neue">Bebas Neue (In hoa mạnh)</option>
-                                <option value="Oswald">Oswald (In hoa dọc)</option>
-                                <option value="Bangers">Bangers (Truyện tranh)</option>
-                                <option value="Permanent Marker">Permanent Marker (Bút lông)</option>
-                                <option value="Abril Fatface">Abril (Báo chí)</option>
+                            <input type="text" id="textInput" placeholder="Nhập nội dung bạn muốn...">
+                            <select id="fontSelect">
+                                <option value="Syne">Syne</option>
+                                <option value="DM Sans">DM Sans</option>
+                                <option value="Space Grotesk">Space Grotesk</option>
+                                <option value="Playfair Display">Playfair Display</option>
+                                <option value="Pacifico">Pacifico</option>
+                                <option value="Bebas Neue">Bebas Neue</option>
+                                <option value="Abril Fatface">Abril Fatface</option>
+                                <option value="Montserrat">Montserrat</option>
+                                <option value="Dancing Script">Dancing Script</option>
+                                <option value="Caveat">Caveat</option>
+                                <option value="Permanent Marker">Permanent Marker</option>
                             </select>
                             
-                            <div class="color-picker-wrap">
-                                <label for="textColor">Thay đổi màu chữ:</label>
-                                <input type="color" id="textColor" value="#ff3366" oninput="updateSelectedTextProperty('color', this.value)">
+                            <div class="text-controls-row">
+                                <input type="color" id="textColor" value="#ff3366" title="Màu chữ">
+                                <div class="quick-colors">
+                                    <span class="qc" style="background:#fff" onclick="setTextColor('#ffffff')"></span>
+                                    <span class="qc" style="background:#000" onclick="setTextColor('#000000')"></span>
+                                    <span class="qc" style="background:#ff5fb7" onclick="setTextColor('#ff5fb7')"></span>
+                                    <span class="qc" style="background:#b56cff" onclick="setTextColor('#b56cff')"></span>
+                                    <span class="qc" style="background:#ffd700" onclick="setTextColor('#ffd700')"></span>
+                                    <span class="qc" style="background:#aaffc3" onclick="setTextColor('#aaffc3')"></span>
+                                </div>
                             </div>
                             
-                            <button class="btn-secondary" onclick="addText()"><i class="ph ph-plus"></i> Thêm</button>
+                            <div class="slider-group compact">
+                                <label>Cỡ chữ: <span id="fontSizeVal">30</span>px</label>
+                                <input type="range" min="10" max="120" value="30" id="textSize" oninput="document.getElementById('fontSizeVal').textContent=this.value; updateSelectedTextProperty('fontSize', parseInt(this.value))">
+                            </div>
+                            
+                            <div class="text-style-toggles">
+                                <button class="style-toggle" id="toggleBold" onclick="toggleTextBold()" title="Đậm"><b>B</b></button>
+                                <button class="style-toggle" id="toggleItalic" onclick="toggleTextItalic()" title="Nghiêng"><i>I</i></button>
+                            </div>
+                            
+                            <div class="slider-group compact">
+                                <label>Viền chữ: <span id="strokeVal">0</span>px</label>
+                                <input type="range" min="0" max="8" value="0" id="textStroke" oninput="document.getElementById('strokeVal').textContent=this.value; updateSelectedTextProperty('strokeWidth', parseInt(this.value))">
+                                <input type="color" id="strokeColor" value="#000000" oninput="updateSelectedTextProperty('strokeColor', this.value)" title="Màu viền">
+                            </div>
+                            
+                            <div class="slider-group compact">
+                                <label>Bóng chữ: <span id="shadowVal">0</span></label>
+                                <input type="range" min="0" max="20" value="0" id="textShadow" oninput="document.getElementById('shadowVal').textContent=this.value; updateSelectedTextProperty('shadowBlur', parseInt(this.value))">
+                                <input type="color" id="shadowColor" value="#000000" oninput="updateSelectedTextProperty('shadowColor', this.value)" title="Màu bóng">
+                            </div>
+                            
+                            <div class="slider-group compact">
+                                <label>Độ trong suốt: <span id="opacityVal">100</span>%</label>
+                                <input type="range" min="10" max="100" value="100" id="textOpacity" oninput="document.getElementById('opacityVal').textContent=this.value; updateSelectedTextProperty('opacity', parseInt(this.value)/100)">
+                            </div>
+                            
+                            <div class="slider-group compact">
+                                <label>Xoay: <span id="rotationVal">0</span>°</label>
+                                <input type="range" min="-180" max="180" value="0" id="textRotation" oninput="document.getElementById('rotationVal').textContent=this.value; updateSelectedTextProperty('rotation', parseInt(this.value))">
+                            </div>
+                            
+                            <button class="btn-secondary full-width" onclick="addText()"><i class="ph ph-plus"></i> Thêm chữ</button>
                         </div>
+                        
+                        <h4 style="margin-top:1rem;">Chữ gợi ý</h4>
                         <div class="suggestions">
-                            <span onclick="setTextInput('Best Day Ever')">Best Day Ever</span>
-                            <span onclick="setTextInput('Lovely Moments')">Lovely Moments</span>
-                            <span onclick="setTextInput('Photobooth Pro')">Photobooth Pro</span>
+                            <span onclick="quickAddText('Best Day Ever')">Best Day Ever</span>
+                            <span onclick="quickAddText('Lovely Moments')">Lovely Moments</span>
+                            <span onclick="quickAddText('Photobooth Pro')">Photobooth Pro</span>
+                            <span onclick="quickAddText('Cao Bá Thiên')">Cao Bá Thiên</span>
+                            <span onclick="quickAddText('My Favorite Day')">My Favorite Day</span>
+                            <span onclick="quickAddText('Made with love')">Made with love</span>
+                            <span onclick="quickAddText('Happy Time')">Happy Time</span>
+                            <span onclick="quickAddText('Cute Moment')">Cute Moment</span>
+                            <span onclick="quickAddText('Love Yourself')">Love Yourself</span>
+                            <span onclick="quickAddText('2026 Memories')">2026 Memories</span>
+                        </div>
+                        
+                        <div class="element-controls hidden" id="elementControls">
+                            <button class="btn-icon danger" onclick="deleteSelectedElement()"><i class="ph ph-trash"></i> Xóa phần tử đang chọn</button>
                         </div>
                     </div>
 
@@ -375,10 +427,40 @@
 
                     <div class="download-section">
                         <button class="btn-primary full-width" onclick="downloadImage()"><i class="ph ph-download-simple"></i> LƯU ẢNH VỀ MÁY</button>
+                        <div class="export-row">
+                            <button class="btn-secondary" onclick="shareFinalImage()"><i class="ph ph-share-network"></i> Chia sẻ</button>
+                            <button class="btn-secondary" onclick="openQRModal()"><i class="ph ph-qr-code"></i> QR</button>
+                            <button class="btn-secondary" onclick="createGif()"><i class="ph ph-gif"></i> GIF</button>
+                            <button class="btn-secondary" onclick="createBoomerang()"><i class="ph ph-repeat"></i> Boomerang</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
+        
+        <!-- QR Modal -->
+        <div id="qrModal" class="modal hidden">
+            <div class="modal-content text-center">
+                <button class="close-modal" onclick="closeQRModal()"><i class="ph ph-x"></i></button>
+                <h3 style="color: var(--active-color);">Quét QR để tải ảnh</h3>
+                <p class="mt-2" style="font-size:0.9rem; color:var(--text-sub);">Dùng điện thoại quét mã QR để mở ảnh photobooth của bạn.</p>
+                <div class="qr-container mt-3">
+                    <canvas id="qrCanvas"></canvas>
+                </div>
+                <div class="flex-col gap-2 mt-3" style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="btn-primary" onclick="downloadImage()"><i class="ph ph-download-simple"></i> Tải ảnh</button>
+                    <button class="btn-secondary" onclick="closeQRModal()" style="justify-content:center;">Đóng</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GIF Loading Modal -->
+        <div id="gifModal" class="modal hidden">
+            <div class="modal-content text-center">
+                <h3 style="color: var(--active-color);"><i class="ph ph-spinner-gap spin"></i> Đang tạo...</h3>
+                <p class="mt-2" id="gifStatus" style="color:var(--text-sub);">Đang xử lý các frame ảnh...</p>
+            </div>
+        </div>
         
         <!-- Toast Notification -->
         <div id="toast" class="toast">Thông báo</div>

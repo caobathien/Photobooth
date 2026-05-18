@@ -1014,6 +1014,102 @@ input:checked + .slider:before { transform: translateX(26px); }
     border-top: 1px solid var(--card-border);
 }
 
+.export-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.export-row .btn-secondary {
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+    padding: 0.6rem 0.4rem;
+    font-size: 0.8rem;
+    gap: 4px;
+}
+
+/* Text Editor Styles */
+.text-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.text-controls-row input[type="color"] {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.quick-colors {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.qc {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: transform 0.2s, border-color 0.2s;
+}
+.qc:hover {
+    transform: scale(1.2);
+    border-color: var(--active-color);
+}
+
+.text-style-toggles {
+    display: flex;
+    gap: 8px;
+}
+.style-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--card-border);
+    color: white;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.style-toggle:hover, .style-toggle.active {
+    background: rgba(181, 108, 255, 0.2);
+    border-color: var(--active-color);
+}
+
+.slider-group.compact {
+    margin-bottom: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.slider-group.compact label {
+    width: 100%;
+    margin-bottom: 0;
+    font-size: 0.8rem;
+}
+.slider-group.compact input[type="range"] {
+    flex: 1;
+}
+.slider-group.compact input[type="color"] {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 /* Toast */
 .toast {
     position: fixed;

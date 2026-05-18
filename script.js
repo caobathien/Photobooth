@@ -849,22 +849,76 @@ function addText() {
     
     const font = document.getElementById('fontSelect').value;
     const color = document.getElementById('textColor').value;
+    const size = parseInt(document.getElementById('textSize').value) || 30;
     
     const el = {
         type: 'text',
         content: input.value,
         x: interactiveLayer.offsetWidth / 2,
         y: interactiveLayer.offsetHeight / 2,
-        fontSize: 30,
+        fontSize: size,
         font: font,
         color: color,
-        rotation: 0
+        weight: '700',
+        italic: false,
+        rotation: 0,
+        opacity: 1,
+        strokeColor: '#000000',
+        strokeWidth: 0,
+        shadowColor: '#000000',
+        shadowBlur: 0
     };
     
     draggableElements.push(el);
     input.value = '';
     renderInteractiveElements();
     selectElement(draggableElements.length - 1);
+}
+
+function quickAddText(text) {
+    const el = {
+        type: 'text',
+        content: text,
+        x: interactiveLayer.offsetWidth / 2,
+        y: interactiveLayer.offsetHeight * 0.8,
+        fontSize: 36,
+        font: 'Pacifico',
+        color: '#ff5fb7',
+        weight: '400',
+        italic: false,
+        rotation: 0,
+        opacity: 1,
+        strokeColor: '#000000',
+        strokeWidth: 0,
+        shadowColor: '#000000',
+        shadowBlur: 4
+    };
+    draggableElements.push(el);
+    renderInteractiveElements();
+    selectElement(draggableElements.length - 1);
+}
+
+function setTextColor(color) {
+    document.getElementById('textColor').value = color;
+    updateSelectedTextProperty('color', color);
+}
+
+function toggleTextBold() {
+    if (selectedElementIndex > -1 && draggableElements[selectedElementIndex].type === 'text') {
+        const el = draggableElements[selectedElementIndex];
+        el.weight = el.weight === '700' ? '400' : '700';
+        document.getElementById('toggleBold').classList.toggle('active', el.weight === '700');
+        renderInteractiveElements();
+    }
+}
+
+function toggleTextItalic() {
+    if (selectedElementIndex > -1 && draggableElements[selectedElementIndex].type === 'text') {
+        const el = draggableElements[selectedElementIndex];
+        el.italic = !el.italic;
+        document.getElementById('toggleItalic').classList.toggle('active', el.italic);
+        renderInteractiveElements();
+    }
 }
 
 function setTextInput(text) {
@@ -1179,7 +1233,15 @@ function renderInteractiveElements() {
             div.style.fontSize = `${el.fontSize}px`;
             div.style.fontFamily = el.font;
             div.style.color = el.color;
-            div.style.fontWeight = '700';
+            div.style.fontWeight = el.weight || '700';
+            div.style.fontStyle = el.italic ? 'italic' : 'normal';
+            div.style.opacity = el.opacity !== undefined ? el.opacity : 1;
+            if (el.strokeWidth > 0) {
+                div.style.webkitTextStroke = `${el.strokeWidth}px ${el.strokeColor || '#000'}`;
+            }
+            if (el.shadowBlur > 0) {
+                div.style.textShadow = `0 0 ${el.shadowBlur}px ${el.shadowColor || '#000'}`;
+            }
             div.textContent = el.content;
         }
         
@@ -1209,8 +1271,22 @@ function selectElement(index) {
         document.getElementById('textInput').value = el.content;
         document.getElementById('fontSelect').value = el.font;
         document.getElementById('textColor').value = el.color;
+        document.getElementById('textSize').value = el.fontSize;
+        document.getElementById('fontSizeVal').textContent = el.fontSize;
+        document.getElementById('textStroke').value = el.strokeWidth || 0;
+        document.getElementById('strokeVal').textContent = el.strokeWidth || 0;
+        document.getElementById('strokeColor').value = el.strokeColor || '#000000';
+        document.getElementById('textShadow').value = el.shadowBlur || 0;
+        document.getElementById('shadowVal').textContent = el.shadowBlur || 0;
+        document.getElementById('shadowColor').value = el.shadowColor || '#000000';
+        document.getElementById('textOpacity').value = (el.opacity || 1) * 100;
+        document.getElementById('opacityVal').textContent = Math.round((el.opacity || 1) * 100);
+        document.getElementById('textRotation').value = el.rotation || 0;
+        document.getElementById('rotationVal').textContent = el.rotation || 0;
+        document.getElementById('toggleBold').classList.toggle('active', el.weight === '700');
+        document.getElementById('toggleItalic').classList.toggle('active', el.italic === true);
         
-        // Auto-switch to text tab if not already there
+        // Auto-switch to text tab
         switchTab('text');
     }
 }
@@ -1340,8 +1416,9 @@ function downloadImage() {
     // 2. Draw draggable elements
     draggableElements.forEach(el => {
         ctx.save();
+        ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1;
         ctx.translate(el.x, el.y);
-        ctx.rotate(el.rotation * Math.PI / 180);
+        ctx.rotate((el.rotation || 0) * Math.PI / 180);
         
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -1350,7 +1427,21 @@ function downloadImage() {
             ctx.font = `${el.fontSize}px sans-serif`;
             ctx.fillText(el.content, 0, 0);
         } else if (el.type === 'text') {
-            ctx.font = `700 ${el.fontSize}px "${el.font}", sans-serif`;
+            const italic = el.italic ? 'italic ' : '';
+            const weight = el.weight || '700';
+            ctx.font = `${italic}${weight} ${el.fontSize}px "${el.font}", sans-serif`;
+            
+            if (el.shadowBlur > 0) {
+                ctx.shadowColor = el.shadowColor || '#000';
+                ctx.shadowBlur = el.shadowBlur;
+            }
+            
+            if (el.strokeWidth > 0) {
+                ctx.strokeStyle = el.strokeColor || '#000';
+                ctx.lineWidth = el.strokeWidth * 2;
+                ctx.strokeText(el.content, 0, 0);
+            }
+            
             ctx.fillStyle = el.color;
             ctx.fillText(el.content, 0, 0);
         }
@@ -1365,6 +1456,228 @@ function downloadImage() {
     link.click();
     
     showToast('Tải ảnh thành công! 🎉');
+}
+
+// ================= SHARE =================
+async function shareFinalImage() {
+    try {
+        const dataUrl = getFinalImageDataUrl();
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], 'photobooth-pro.png', { type: 'image/png' });
+        
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: 'Photobooth Pro',
+                text: 'Ảnh photobooth của tôi ✨'
+            });
+        } else {
+            showToast('Trình duyệt chưa hỗ trợ chia sẻ trực tiếp. Đã tải ảnh về máy.');
+            downloadImage();
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            showToast('Không thể chia sẻ. Đã tải ảnh về máy.');
+            downloadImage();
+        }
+    }
+}
+
+function getFinalImageDataUrl() {
+    selectElement(-1);
+    const dlCanvas = document.createElement('canvas');
+    dlCanvas.width = finalCanvas.width;
+    dlCanvas.height = finalCanvas.height;
+    const ctx = dlCanvas.getContext('2d');
+    
+    ctx.filter = `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%) blur(${adjustments.blur}px)`;
+    switch (currentFilter) {
+        case 'beauty': ctx.filter += ' blur(0.5px) brightness(110%) saturate(110%)'; break;
+        case 'vintage': ctx.filter += ' sepia(50%) contrast(120%) brightness(90%) hue-rotate(-10deg)'; break;
+        case 'film': ctx.filter += ' contrast(130%) saturate(80%) sepia(20%)'; break;
+        case 'bw': ctx.filter += ' grayscale(100%) contrast(110%)'; break;
+        case 'warm': ctx.filter += ' sepia(30%) saturate(120%) hue-rotate(-10deg)'; break;
+        case 'cool': ctx.filter += ' hue-rotate(180deg) saturate(90%) brightness(105%)'; break;
+        case 'pink': ctx.filter += ' hue-rotate(300deg) saturate(120%) brightness(110%)'; break;
+        case 'sepia': ctx.filter += ' sepia(100%)'; break;
+        case 'contrast': ctx.filter += ' contrast(150%) saturate(110%)'; break;
+        case 'dreamy': ctx.filter += ' blur(1px) brightness(120%) saturate(110%) contrast(90%)'; break;
+    }
+    ctx.drawImage(finalCanvas, 0, 0);
+    ctx.filter = 'none';
+    
+    draggableElements.forEach(el => {
+        ctx.save();
+        ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1;
+        ctx.translate(el.x, el.y);
+        ctx.rotate((el.rotation || 0) * Math.PI / 180);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if (el.type === 'sticker') {
+            ctx.font = `${el.fontSize}px sans-serif`;
+            ctx.fillText(el.content, 0, 0);
+        } else if (el.type === 'text') {
+            const italic = el.italic ? 'italic ' : '';
+            const weight = el.weight || '700';
+            ctx.font = `${italic}${weight} ${el.fontSize}px "${el.font}", sans-serif`;
+            if (el.shadowBlur > 0) { ctx.shadowColor = el.shadowColor || '#000'; ctx.shadowBlur = el.shadowBlur; }
+            if (el.strokeWidth > 0) { ctx.strokeStyle = el.strokeColor || '#000'; ctx.lineWidth = el.strokeWidth * 2; ctx.strokeText(el.content, 0, 0); }
+            ctx.fillStyle = el.color;
+            ctx.fillText(el.content, 0, 0);
+        }
+        ctx.restore();
+    });
+    
+    return dlCanvas.toDataURL('image/png', 1.0);
+}
+
+// ================= QR CODE =================
+function openQRModal() {
+    const modal = document.getElementById('qrModal');
+    modal.classList.remove('hidden');
+    
+    try {
+        if (typeof QRCode === 'undefined') {
+            showToast('Thư viện QR chưa tải xong. Vui lòng thử lại.');
+            modal.classList.add('hidden');
+            return;
+        }
+        
+        const dataUrl = getFinalImageDataUrl();
+        // dataURL too long for QR, use a small placeholder message
+        if (dataUrl.length > 2000) {
+            const qrCanvas = document.getElementById('qrCanvas');
+            QRCode.toCanvas(qrCanvas, 'Photobooth Pro - Dùng nút Tải ảnh để lưu ảnh về máy', {
+                width: 200,
+                color: { dark: '#000', light: '#fff' }
+            });
+            showToast('Ảnh quá lớn để tạo QR trực tiếp. Vui lòng dùng nút tải ảnh.');
+        } else {
+            const qrCanvas = document.getElementById('qrCanvas');
+            QRCode.toCanvas(qrCanvas, dataUrl, { width: 200 });
+        }
+    } catch (err) {
+        showToast('Không thể tạo QR lúc này.');
+        modal.classList.add('hidden');
+    }
+}
+
+function closeQRModal() {
+    document.getElementById('qrModal').classList.add('hidden');
+}
+
+// ================= GIF / BOOMERANG =================
+async function createGif() {
+    if (!selectedImages || selectedImages.length < 2) {
+        showToast('Cần ít nhất 2 ảnh để tạo GIF.');
+        return;
+    }
+    
+    if (typeof GIF === 'undefined') {
+        showToast('Thư viện GIF chưa tải được. Vui lòng thử lại.');
+        return;
+    }
+    
+    const gifModal = document.getElementById('gifModal');
+    gifModal.classList.remove('hidden');
+    document.getElementById('gifStatus').textContent = 'Đang tạo GIF...';
+    
+    try {
+        const gif = new GIF({
+            workers: 2,
+            quality: 10,
+            workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
+        });
+        
+        for (const src of selectedImages) {
+            const img = new Image();
+            img.src = src;
+            await new Promise(r => img.onload = r);
+            
+            const c = document.createElement('canvas');
+            c.width = 400; c.height = 533;
+            const cx = c.getContext('2d');
+            const ratio = img.width / img.height;
+            let dw, dh, dx, dy;
+            if (ratio > c.width / c.height) { dh = c.height; dw = dh * ratio; dx = (c.width - dw) / 2; dy = 0; }
+            else { dw = c.width; dh = dw / ratio; dx = 0; dy = (c.height - dh) / 2; }
+            cx.drawImage(img, dx, dy, dw, dh);
+            gif.addFrame(c, { delay: 400 });
+        }
+        
+        gif.on('finished', function(blob) {
+            gifModal.classList.add('hidden');
+            const link = document.createElement('a');
+            link.download = `photobooth-${Date.now()}.gif`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            showToast('GIF đã được tạo thành công! 🎉');
+        });
+        
+        gif.render();
+    } catch (err) {
+        gifModal.classList.add('hidden');
+        showToast('Không thể tạo GIF lúc này, vui lòng thử lại.');
+    }
+}
+
+async function createBoomerang() {
+    if (!selectedImages || selectedImages.length < 2) {
+        showToast('Cần ít nhất 2 ảnh để tạo Boomerang.');
+        return;
+    }
+    
+    if (typeof GIF === 'undefined') {
+        showToast('Thư viện GIF chưa tải được. Vui lòng thử lại.');
+        return;
+    }
+    
+    const gifModal = document.getElementById('gifModal');
+    gifModal.classList.remove('hidden');
+    document.getElementById('gifStatus').textContent = 'Đang tạo Boomerang...';
+    
+    try {
+        // Create boomerang sequence: 1,2,3,4,3,2
+        const boomerangSequence = [...selectedImages];
+        for (let i = selectedImages.length - 2; i > 0; i--) {
+            boomerangSequence.push(selectedImages[i]);
+        }
+        
+        const gif = new GIF({
+            workers: 2, quality: 10,
+            workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
+        });
+        
+        for (const src of boomerangSequence) {
+            const img = new Image();
+            img.src = src;
+            await new Promise(r => img.onload = r);
+            
+            const c = document.createElement('canvas');
+            c.width = 400; c.height = 533;
+            const cx = c.getContext('2d');
+            const ratio = img.width / img.height;
+            let dw, dh, dx, dy;
+            if (ratio > c.width / c.height) { dh = c.height; dw = dh * ratio; dx = (c.width - dw) / 2; dy = 0; }
+            else { dw = c.width; dh = dw / ratio; dx = 0; dy = (c.height - dh) / 2; }
+            cx.drawImage(img, dx, dy, dw, dh);
+            gif.addFrame(c, { delay: 250 });
+        }
+        
+        gif.on('finished', function(blob) {
+            gifModal.classList.add('hidden');
+            const link = document.createElement('a');
+            link.download = `photobooth-boomerang-${Date.now()}.gif`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            showToast('Boomerang đã được tạo thành công! 🎉');
+        });
+        
+        gif.render();
+    } catch (err) {
+        gifModal.classList.add('hidden');
+        showToast('Không thể tạo Boomerang lúc này, vui lòng thử lại.');
+    }
 }
 
 // ================= UTILS =================
