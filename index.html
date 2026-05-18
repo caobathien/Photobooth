@@ -42,27 +42,109 @@
                     <p class="subtitle">Bố cục nào phù hợp với bạn hôm nay? ✨</p>
                 </header>
 
-                <div class="layout-cards">
-                    <!-- Card 1 -->
+                <!-- Layout Category Tabs -->
+                <div class="layout-category-tabs">
+                    <button class="cat-tab active" onclick="switchLayoutCategory('free', this)">🆓 Free</button>
+                    <button class="cat-tab" onclick="switchLayoutCategory('premium', this)">💎 Premium</button>
+                    <button class="cat-tab" onclick="switchLayoutCategory('seasonal', this)">🎉 Seasonal</button>
+                </div>
+
+                <!-- Free Layouts -->
+                <div class="layout-cards" id="layoutCatFree">
                     <div class="card" data-layout="2-strip" onclick="selectLayout('2-strip')">
                         <div class="card-icon"><i class="ph ph-film-strip"></i></div>
                         <h3>Dải đôi</h3>
-                        <p>2 ảnh kiểu film strip cổ điển</p>
+                        <p>2 ảnh kiểu film strip</p>
                     </div>
-
-                    <!-- Card 2 (Premium Support) -->
-                    <div class="card premium-card" data-layout="4-strip" onclick="selectLayout('4-strip')">
-                        <div class="badge premium"><i class="ph-fill ph-heart"></i> ỦNG HỘ TÈ</div>
+                    <div class="card" data-layout="4-strip" onclick="selectLayout('4-strip')">
                         <div class="card-icon"><i class="ph ph-film-strip"></i></div>
                         <h3>Dải tư</h3>
-                        <p>4 ảnh dọc như photobooth thật</p>
+                        <p>4 ảnh dọc photobooth</p>
                     </div>
-
-                    <!-- Card 3 -->
                     <div class="card" data-layout="2x2-grid" onclick="selectLayout('2x2-grid')">
                         <div class="card-icon"><i class="ph ph-squares-four"></i></div>
                         <h3>Lưới 2x2</h3>
-                        <p>4 ảnh dạng polaroid vuông</p>
+                        <p>4 ảnh dạng polaroid</p>
+                    </div>
+                </div>
+
+                <!-- Premium Layouts -->
+                <div class="layout-cards hidden" id="layoutCatPremium">
+                    <div class="card premium-card" data-layout="luxury-neon" onclick="selectPremiumLayout('luxury-neon')">
+                        <div class="badge premium">PREMIUM</div>
+                        <div class="card-icon">💜</div>
+                        <h3>Luxury Neon</h3>
+                        <p>Neon tím hồng sang trọng</p>
+                    </div>
+                    <div class="card premium-card" data-layout="pink-dream" onclick="selectPremiumLayout('pink-dream')">
+                        <div class="badge premium">PREMIUM</div>
+                        <div class="card-icon">🌸</div>
+                        <h3>Pink Dream</h3>
+                        <p>Hồng pastel mơ màng</p>
+                    </div>
+                    <div class="card premium-card" data-layout="kawaii-booth" onclick="selectPremiumLayout('kawaii-booth')">
+                        <div class="badge premium">PREMIUM</div>
+                        <div class="card-icon">🐰</div>
+                        <h3>Kawaii Booth</h3>
+                        <p>Phong cách dễ thương</p>
+                    </div>
+                    <div class="card premium-card" data-layout="elegant-black" onclick="selectPremiumLayout('elegant-black')">
+                        <div class="badge premium">PREMIUM</div>
+                        <div class="card-icon">🖤</div>
+                        <h3>Elegant Black</h3>
+                        <p>Đen sang trọng tối giản</p>
+                    </div>
+                    <div class="card premium-card" data-layout="soft-pastel" onclick="selectPremiumLayout('soft-pastel')">
+                        <div class="badge premium">PREMIUM</div>
+                        <div class="card-icon">🍬</div>
+                        <h3>Soft Pastel</h3>
+                        <p>Tone màu nhẹ nhàng</p>
+                    </div>
+                    <div class="card premium-card" data-layout="couple-memories" onclick="selectPremiumLayout('couple-memories')">
+                        <div class="badge premium">PREMIUM</div>
+                        <div class="card-icon">💑</div>
+                        <h3>Couple Memories</h3>
+                        <p>Kỷ niệm đôi lứa</p>
+                    </div>
+                </div>
+
+                <!-- Seasonal Layouts -->
+                <div class="layout-cards hidden" id="layoutCatSeasonal">
+                    <div class="card seasonal-card" data-layout="tet" onclick="selectPremiumLayout('tet')">
+                        <div class="badge seasonal">🧧 TẾT</div>
+                        <div class="card-icon">🌺</div>
+                        <h3>Tết Việt Nam</h3>
+                        <p>Hoa mai, lì xì, đỏ vàng</p>
+                    </div>
+                    <div class="card seasonal-card" data-layout="valentine" onclick="selectPremiumLayout('valentine')">
+                        <div class="badge seasonal">💕 LOVE</div>
+                        <div class="card-icon">💝</div>
+                        <h3>Valentine</h3>
+                        <p>Trái tim, tình yêu</p>
+                    </div>
+                    <div class="card seasonal-card" data-layout="christmas" onclick="selectPremiumLayout('christmas')">
+                        <div class="badge seasonal">🎄 XMAS</div>
+                        <div class="card-icon">🎅</div>
+                        <h3>Giáng Sinh</h3>
+                        <p>Tuyết, cây thông, đỏ xanh</p>
+                    </div>
+                    <div class="card seasonal-card" data-layout="halloween" onclick="selectPremiumLayout('halloween')">
+                        <div class="badge seasonal">🎃 SPOOKY</div>
+                        <div class="card-icon">👻</div>
+                        <h3>Halloween</h3>
+                        <p>Bí ngô, cam tím</p>
+                    </div>
+                    <div class="card seasonal-card" data-layout="birthday" onclick="selectPremiumLayout('birthday')">
+                        <div class="badge seasonal">🎂 B-DAY</div>
+                        <div class="card-icon">🎈</div>
+                        <h3>Sinh nhật</h3>
+                        <p>Bong bóng, confetti</p>
+                    </div>
+                    <div class="card seasonal-card" data-layout="graduation" onclick="selectPremiumLayout('graduation')">
+                        <div class="badge seasonal">🎓 GRAD</div>
+                        <div class="card-icon">🎓</div>
+                        <h3>Graduation</h3>
+                        <p>Tốt nghiệp, vàng đen</p>
                     </div>
                 </div>
 
@@ -76,9 +158,9 @@
         <div id="supportModal" class="modal hidden">
             <div class="modal-content text-center">
                 <button class="close-modal" onclick="closeSupportModal()"><i class="ph ph-x"></i></button>
-                <h3 style="color: var(--active-color);"><i class="ph-fill ph-heart" style="color: #ff5fb7;"></i> Ủng hộ Tè nhé!</h3>
+                <h3 style="color: var(--active-color);">✨ Ủng hộ để mở khóa Premium ✨</h3>
                 <p class="mt-2" style="font-size: 0.95rem; line-height: 1.5;">
-                    Mẫu <strong>Dải tư (4 ảnh)</strong> hoàn toàn miễn phí! Nếu bạn yêu thích dự án, hãy quét QR ủng hộ Tè (tùy tâm) để mình có thêm động lực cập nhật nhiều tính năng xịn mịn hơn nha! 💖
+                    Quét mã QR để ủng hộ nhà phát triển và mở khóa các khung hình độc quyền Premium + Seasonal! 💖
                 </p>
                 
                 <div class="qr-container mt-3">
@@ -88,8 +170,8 @@
                 <p class="mt-2 text-sub" style="font-size: 0.85rem;">STK: <strong>0332941152</strong> - MBBank<br>Tên tài khoản: <strong>CAO BA THIEN</strong></p>
                 
                 <div class="flex-col gap-2 mt-3" style="display: flex; flex-direction: column; gap: 10px;">
-                    <button class="btn-primary" onclick="proceedWithLayout()">Vào phòng chụp ngay 📸</button>
-                    <button class="btn-secondary" onclick="closeSupportModal()" style="justify-content: center;">Để sau</button>
+                    <button class="btn-primary" onclick="unlockPremium()">Tôi đã ủng hộ 💖</button>
+                    <button class="btn-secondary" onclick="closeSupportModal()" style="justify-content: center;">Đóng</button>
                 </div>
             </div>
         </div>

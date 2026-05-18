@@ -176,6 +176,43 @@ h3, h4 { font-family: var(--font-heading); }
     color: white;
     box-shadow: 0 2px 10px rgba(255, 95, 183, 0.3);
 }
+.seasonal-card {
+    border-color: rgba(255, 200, 50, 0.3);
+}
+.seasonal-card .badge.seasonal {
+    background: linear-gradient(135deg, #ff9800, #ffc107);
+    color: #333;
+    box-shadow: 0 2px 10px rgba(255, 152, 0, 0.3);
+}
+
+/* Layout Category Tabs */
+.layout-category-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 2rem;
+}
+.cat-tab {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--card-border);
+    color: var(--text-sub);
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.cat-tab:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+.cat-tab.active {
+    background: var(--btn-gradient);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 5px 15px rgba(181, 108, 255, 0.4);
+}
 
 .card-icon {
     font-size: 3rem;

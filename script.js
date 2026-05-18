@@ -1,5 +1,6 @@
 // ================= STATE VARIABLES =================
-let selectedLayout = null; // '2-strip', '4-strip', '2x2-grid'
+let selectedLayout = null; // '2-strip', '4-strip', '2x2-grid' or themed layouts
+let selectedTheme = null; // themed layout config object
 let maxImages = 0;
 let capturedImages = []; // Stores all 6 captured data URLs
 let selectedImages = []; // Stores selected images to be put in template
@@ -8,6 +9,7 @@ let cameraStream = null;
 let currentFacingMode = 'user';
 let isCapturing = false;
 let currentZoom = 1;
+let isPremiumUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
 
 // Camera Filters & Beauty Settings
 const CAMERA_FILTERS = {
@@ -171,15 +173,36 @@ function initPinchToZoom() {
 }
 
 // ================= LAYOUT SCREEN =================
+// Themed layout configurations
+const THEMED_LAYOUTS = {
+    'luxury-neon': { name: 'Luxury Neon', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #1a0030, #2d0050)', borderColor: '#b56cff', decos: ['✨','💜','⭐'], textDefault: 'Luxury Neon' },
+    'pink-dream': { name: 'Pink Dream', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #ffe0f0, #ffc0e0)', borderColor: '#ff69b4', decos: ['🌸','💕','🎀'], textDefault: 'Pink Dream' },
+    'kawaii-booth': { name: 'Kawaii Booth', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #fff0f5, #ffe4f0)', borderColor: '#ffb6c1', decos: ['🐰','🌟','🍭','🎀'], textDefault: 'Kawaii ♡' },
+    'elegant-black': { name: 'Elegant Black', type: 'premium', photoCount: 2, baseLayout: '2-strip', bg: '#0a0a0a', borderColor: '#d4af37', decos: ['⭐'], textDefault: 'Elegant' },
+    'soft-pastel': { name: 'Soft Pastel', type: 'premium', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #e8daef, #d5f5e3, #fdebd0)', borderColor: '#c39bd3', decos: ['🌈','🦋','☁️'], textDefault: 'Soft Pastel' },
+    'couple-memories': { name: 'Couple Memories', type: 'premium', photoCount: 2, baseLayout: '2-strip', bg: 'linear-gradient(135deg, #fce4ec, #f8bbd0)', borderColor: '#e91e63', decos: ['❤️','💑','💕'], textDefault: 'Our Memories' },
+    'tet': { name: 'Tết Việt Nam', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #c62828, #ff8f00)', borderColor: '#ffd700', decos: ['🌺','🧧','🎊','🏮'], textDefault: 'Chúc Mừng Năm Mới' },
+    'valentine': { name: 'Valentine', type: 'seasonal', photoCount: 2, baseLayout: '2-strip', bg: 'linear-gradient(135deg, #e91e63, #f48fb1)', borderColor: '#ff1744', decos: ['❤️','💕','💘','🌹'], textDefault: 'Happy Valentine' },
+    'christmas': { name: 'Giáng Sinh', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #1b5e20, #b71c1c)', borderColor: '#fff', decos: ['🎄','⭐','❄️','🎁'], textDefault: 'Merry Christmas' },
+    'halloween': { name: 'Halloween', type: 'seasonal', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #1a0a2e, #ff6f00)', borderColor: '#ff9800', decos: ['🎃','👻','🦇','🕷️'], textDefault: 'Happy Halloween' },
+    'birthday': { name: 'Sinh nhật', type: 'seasonal', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #e1bee7, #bbdefb, #fff9c4)', borderColor: '#ff4081', decos: ['🎈','🎂','🎉','🎊'], textDefault: 'Happy Birthday!' },
+    'graduation': { name: 'Graduation', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #1a1a2e, #d4af37)', borderColor: '#d4af37', decos: ['🎓','⭐','🏆'], textDefault: 'Congratulations!' }
+};
+
+function switchLayoutCategory(category, btnEl) {
+    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+    btnEl.classList.add('active');
+    
+    document.getElementById('layoutCatFree').classList.add('hidden');
+    document.getElementById('layoutCatPremium').classList.add('hidden');
+    document.getElementById('layoutCatSeasonal').classList.add('hidden');
+    document.getElementById(`layoutCat${category.charAt(0).toUpperCase() + category.slice(1)}`).classList.remove('hidden');
+}
+
 function selectLayout(type) {
-    if (type === '4-strip' && !hasSeenSupportPopup) {
-        document.getElementById('supportModal').classList.remove('hidden');
-        return;
-    }
-    
     selectedLayout = type;
+    selectedTheme = null;
     
-    // Update UI
     document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
     const cardEl = document.querySelector(`.card[data-layout="${type}"]`);
     if (cardEl) cardEl.classList.add('selected');
@@ -191,11 +214,43 @@ function selectLayout(type) {
     else if (type === '2x2-grid') maxImages = 4;
 }
 
+function selectPremiumLayout(themeId) {
+    if (!isPremiumUnlocked) {
+        pendingThemeId = themeId;
+        document.getElementById('supportModal').classList.remove('hidden');
+        return;
+    }
+    
+    const theme = THEMED_LAYOUTS[themeId];
+    if (!theme) return;
+    
+    selectedTheme = { ...theme, id: themeId };
+    selectedLayout = theme.baseLayout;
+    maxImages = theme.photoCount;
+    
+    document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
+    const cardEl = document.querySelector(`.card[data-layout="${themeId}"]`);
+    if (cardEl) cardEl.classList.add('selected');
+    
+    btnEnterRoom.disabled = false;
+}
+
+let pendingThemeId = null;
+
+function unlockPremium() {
+    isPremiumUnlocked = true;
+    localStorage.setItem('premiumUnlocked', 'true');
+    document.getElementById('supportModal').classList.add('hidden');
+    showToast('Cảm ơn bạn đã ủng hộ! Premium đã được mở khóa 💖');
+    
+    if (pendingThemeId) {
+        selectPremiumLayout(pendingThemeId);
+        pendingThemeId = null;
+    }
+}
+
 function closeSupportModal() {
     document.getElementById('supportModal').classList.add('hidden');
-    // Bỏ qua hoặc đóng vẫn cho phép chọn
-    hasSeenSupportPopup = true;
-    selectLayout('4-strip');
 }
 
 function proceedWithLayout() {
@@ -214,6 +269,7 @@ function goBackToLayout() {
     stopCamera();
     resetShoot();
     selectedLayout = null;
+    selectedTheme = null;
     document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
     btnEnterRoom.disabled = true;
     
@@ -1061,26 +1117,33 @@ async function renderPhotobooth() {
     interactiveLayer.style.transform = `translate(-50%, -50%) scale(${scale})`;
     
     // 1. Draw Background
-    if (frameBg.startsWith('linear-gradient')) {
-        // Simple parsing for our predefined gradients
+    const bgToUse = selectedTheme ? selectedTheme.bg : frameBg;
+    
+    if (bgToUse.startsWith('linear-gradient')) {
         const gradient = ctx.createLinearGradient(0, 0, width, height);
-        if (frameBg.includes('b56cff')) {
+        // Parse colors from gradient string
+        const colorMatches = bgToUse.match(/#[0-9a-fA-F]{3,6}/g);
+        if (colorMatches && colorMatches.length >= 2) {
+            colorMatches.forEach((c, i) => gradient.addColorStop(i / (colorMatches.length - 1), c));
+        } else {
             gradient.addColorStop(0, '#b56cff');
             gradient.addColorStop(1, '#ff5fb7');
-        } else {
-            gradient.addColorStop(0, '#4facfe');
-            gradient.addColorStop(1, '#00f2fe');
         }
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
     } else {
-        ctx.fillStyle = frameBg;
+        ctx.fillStyle = bgToUse;
         ctx.fillRect(0, 0, width, height);
     }
 
     // 1b. Draw Effects / Overlay on the background (behind photos)
     if (currentOverlay !== 'none') {
         drawOverlay(ctx, width, height, currentOverlay);
+    }
+    
+    // 1c. Draw themed decorations (behind photos)
+    if (selectedTheme && selectedTheme.decos) {
+        drawThemedDecorations(ctx, width, height, selectedTheme.decos);
     }
 
     // 2. Draw Images (Object-fit cover)
@@ -1092,6 +1155,17 @@ async function renderPhotobooth() {
         const img = new Image();
         img.src = selectedImages[i];
         await new Promise(r => img.onload = r);
+        
+        // Draw themed border if applicable
+        if (selectedTheme && selectedTheme.borderColor) {
+            ctx.save();
+            ctx.strokeStyle = selectedTheme.borderColor;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.roundRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4, 17);
+            ctx.stroke();
+            ctx.restore();
+        }
         
         // Draw with border radius simulation using clipping
         ctx.save();
@@ -1122,12 +1196,13 @@ async function renderPhotobooth() {
     }
     
     // 3. Draw Branding & Date
-    ctx.fillStyle = getTextColorForBg(frameBg);
+    const brandingText = selectedTheme ? selectedTheme.textDefault : 'Photobooth Pro';
+    const textColor = selectedTheme ? (selectedTheme.borderColor || '#fff') : getTextColorForBg(bgToUse);
+    ctx.fillStyle = textColor;
     ctx.textAlign = 'center';
     
-    // Logo text
     ctx.font = 'bold 30px "Syne", sans-serif';
-    ctx.fillText('Photobooth Pro', width / 2, height - padding / 1.5);
+    ctx.fillText(brandingText, width / 2, height - padding / 1.5);
     
     if (showDateStamp) {
         const date = new Date();
@@ -1137,13 +1212,63 @@ async function renderPhotobooth() {
         ctx.fillText(dateStr, width - padding, height - padding / 1.5);
     }
     
-    // 4. Removed overlay from here because it's now drawn before images
+    // 3b. Draw themed decorations on top (foreground)
+    if (selectedTheme && selectedTheme.decos) {
+        drawThemedDecorationsTop(ctx, width, height, selectedTheme.decos);
+    }
 }
 
 // Utility to determine if text should be white or black based on bg
 function getTextColorForBg(bg) {
     if (bg === '#ffffff' || bg === '#ffd1dc' || bg === '#aaffc3' || bg === '#fffacd') return '#000000';
     return '#ffffff';
+}
+
+// Draw themed emoji decorations behind photos
+function drawThemedDecorations(ctx, w, h, decos) {
+    ctx.save();
+    // Seeded random for consistent layout
+    let seed = 42;
+    const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    
+    for (let i = 0; i < 25; i++) {
+        const emoji = decos[Math.floor(rng() * decos.length)];
+        ctx.save();
+        ctx.globalAlpha = 0.15 + rng() * 0.15;
+        ctx.translate(rng() * w, rng() * h);
+        ctx.rotate(rng() * Math.PI * 2);
+        ctx.font = `${20 + rng() * 30}px sans-serif`;
+        ctx.fillText(emoji, 0, 0);
+        ctx.restore();
+    }
+    ctx.restore();
+}
+
+// Draw themed emoji decorations on top (foreground corners & edges)
+function drawThemedDecorationsTop(ctx, w, h, decos) {
+    ctx.save();
+    const size = 28;
+    ctx.font = `${size}px sans-serif`;
+    ctx.globalAlpha = 0.9;
+    
+    // Top-left corner cluster
+    decos.forEach((emoji, i) => {
+        ctx.fillText(emoji, 8 + i * 30, 30);
+    });
+    
+    // Top-right corner
+    decos.forEach((emoji, i) => {
+        ctx.fillText(emoji, w - 35 - i * 30, 30);
+    });
+    
+    // Bottom-left
+    ctx.fillText(decos[0], 10, h - 55);
+    if (decos[1]) ctx.fillText(decos[1], 40, h - 55);
+    
+    // Bottom-right
+    ctx.fillText(decos[decos.length - 1], w - 35, h - 55);
+    
+    ctx.restore();
 }
 
 function drawOverlay(ctx, w, h, type) {
