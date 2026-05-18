@@ -1086,6 +1086,34 @@ input:checked + .slider:before { transform: translateX(26px); }
     display: block;
 }
 
+/* Brand Logo Styling */
+.brand-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 0.8rem;
+}
+.brand-logo {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--active-color);
+    box-shadow: 0 0 15px rgba(181, 108, 255, 0.4);
+    animation: pulseGlow 2s infinite alternate;
+}
+@keyframes pulseGlow {
+    from {
+        box-shadow: 0 0 10px rgba(181, 108, 255, 0.3);
+        transform: scale(1);
+    }
+    to {
+        box-shadow: 0 0 20px rgba(181, 108, 255, 0.6);
+        transform: scale(1.03);
+    }
+}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 900px) {
     .editor-layout {
