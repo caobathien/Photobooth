@@ -318,13 +318,179 @@ function switchCameraTab(tabName, btnElement) {
     document.querySelectorAll('.filter-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
     btnElement.classList.add('active');
     
+    document.getElementById('cameraTabFilters').classList.add('hidden');
+    document.getElementById('cameraTabReshape').classList.add('hidden');
+    document.getElementById('cameraTabBackground').classList.add('hidden');
+    
     if (tabName === 'filters') {
         document.getElementById('cameraTabFilters').classList.remove('hidden');
-        document.getElementById('cameraTabReshape').classList.add('hidden');
-    } else {
-        document.getElementById('cameraTabFilters').classList.add('hidden');
+    } else if (tabName === 'reshape') {
         document.getElementById('cameraTabReshape').classList.remove('hidden');
+    } else if (tabName === 'background') {
+        document.getElementById('cameraTabBackground').classList.remove('hidden');
     }
+}
+
+// ================= VIRTUAL BACKGROUND =================
+let currentVirtualBackground = 'none';
+let selfieSegmenter = null;
+let isSegmenting = false;
+let segmentRAF = null;
+
+function setVirtualBackground(bgType) {
+    currentVirtualBackground = bgType;
+    document.querySelectorAll('#cameraTabBackground .filter-preview-box').forEach(box => box.classList.remove('active'));
+    
+    // Find the clicked element based on onclick attribute or pass it as param. Here we just find by matching bgType.
+    const boxes = document.querySelectorAll('#cameraTabBackground .filter-preview-box');
+    boxes.forEach(box => {
+        if (box.getAttribute('onclick').includes(`'${bgType}'`)) box.classList.add('active');
+    });
+
+    if (bgType !== 'none') {
+        document.getElementById('cameraVideo').style.opacity = '0';
+        document.getElementById('bgCanvas').classList.remove('hidden');
+        if (!selfieSegmenter) {
+            initSelfieSegmentation();
+        } else if (!isSegmenting) {
+            isSegmenting = true;
+            segmentLoop();
+        }
+    } else {
+        document.getElementById('cameraVideo').style.opacity = '1';
+        document.getElementById('bgCanvas').classList.add('hidden');
+        isSegmenting = false;
+        if (segmentRAF) {
+            cancelAnimationFrame(segmentRAF);
+            segmentRAF = null;
+        }
+    }
+}
+
+async function initSelfieSegmentation() {
+    try {
+        selfieSegmenter = new SelfieSegmentation({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
+        }});
+        selfieSegmenter.setOptions({
+            modelSelection: 1, // 0 for general, 1 for landscape (faster)
+        });
+        selfieSegmenter.onResults(onSegmentationResults);
+        
+        isSegmenting = true;
+        segmentLoop();
+    } catch (err) {
+        console.error("Selfie segmentation init error:", err);
+    }
+}
+
+async function segmentLoop() {
+    if (!isSegmenting || !cameraVideo || cameraVideo.paused) return;
+    
+    try {
+        await selfieSegmenter.send({image: cameraVideo});
+    } catch (e) {}
+    
+    segmentRAF = requestAnimationFrame(segmentLoop);
+}
+
+function onSegmentationResults(results) {
+    if (!isSegmenting || currentVirtualBackground === 'none') return;
+    
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Match video dimensions
+    if (canvas.width !== cameraVideo.videoWidth) {
+        canvas.width = cameraVideo.videoWidth;
+        canvas.height = cameraVideo.videoHeight;
+    }
+    
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw background
+    if (currentVirtualBackground === 'blur') {
+        ctx.filter = 'blur(10px)';
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+        ctx.filter = 'none';
+    } else {
+        let bgStyle = '#000';
+        if (currentVirtualBackground === 'color1') bgStyle = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)';
+        else if (currentVirtualBackground === 'color2') bgStyle = 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)';
+        else if (currentVirtualBackground === 'color3') bgStyle = 'linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%)';
+        else if (currentVirtualBackground === 'color4') bgStyle = 'linear-gradient(to right, #4facfe 0%, #00f2fe 100%)';
+        
+        if (bgStyle.startsWith('linear-gradient')) {
+            const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            if (currentVirtualBackground === 'color1') { grad.addColorStop(0, '#ff9a9e'); grad.addColorStop(1, '#fecfef'); }
+            else if (currentVirtualBackground === 'color2') { grad.addColorStop(0, '#a1c4fd'); grad.addColorStop(1, '#c2e9fb'); }
+            else if (currentVirtualBackground === 'color3') { grad.addColorStop(0, '#cfd9df'); grad.addColorStop(1, '#e2ebf0'); }
+            else if (currentVirtualBackground === 'color4') { grad.addColorStop(0, '#4facfe'); grad.addColorStop(1, '#00f2fe'); }
+            ctx.fillStyle = grad;
+        } else {
+            ctx.fillStyle = bgStyle;
+        }
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Mask and draw the person
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+    
+    ctx.globalCompositeOperation = 'destination-over';
+    // The background is already drawn, wait, destination-over means drawing behind existing content.
+    // So we should have drawn the person first!
+    
+    // Let's rewrite the drawing logic properly:
+    // 1. Draw mask
+    // 2. Draw person (source-in)
+    // 3. Draw background (destination-over)
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 1. Draw Mask
+    ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+    
+    // 2. Draw person over mask
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+    
+    // 3. Draw background behind person
+    ctx.globalCompositeOperation = 'destination-over';
+    
+    if (currentVirtualBackground === 'blur') {
+        ctx.filter = 'blur(15px)';
+        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+        ctx.filter = 'none';
+    } else {
+        let bgStyle = '#000';
+        if (currentVirtualBackground === 'color1') bgStyle = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)';
+        else if (currentVirtualBackground === 'color2') bgStyle = 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)';
+        else if (currentVirtualBackground === 'color3') bgStyle = 'linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%)';
+        else if (currentVirtualBackground === 'color4') bgStyle = 'linear-gradient(to right, #4facfe 0%, #00f2fe 100%)';
+        
+        if (bgStyle.startsWith('linear-gradient')) {
+            const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            if (currentVirtualBackground === 'color1') { grad.addColorStop(0, '#ff9a9e'); grad.addColorStop(1, '#fecfef'); }
+            else if (currentVirtualBackground === 'color2') { grad.addColorStop(0, '#a1c4fd'); grad.addColorStop(1, '#c2e9fb'); }
+            else if (currentVirtualBackground === 'color3') { grad.addColorStop(0, '#cfd9df'); grad.addColorStop(1, '#e2ebf0'); }
+            else if (currentVirtualBackground === 'color4') { grad.addColorStop(0, '#4facfe'); grad.addColorStop(1, '#00f2fe'); }
+            ctx.fillStyle = grad;
+        } else {
+            ctx.fillStyle = bgStyle;
+        }
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    ctx.restore();
+}
+
+let captureTimer = 3;
+function setTimer(seconds) {
+    captureTimer = seconds;
+    document.querySelectorAll('.timer-pill').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btnTimer${seconds}`).classList.add('active');
 }
 
 function handleUploadPhoto(event) {
@@ -567,7 +733,10 @@ function adjustZoom(delta) {
 
 function applyVideoTransform() {
     if (!cameraVideo) return;
-    cameraVideo.style.transform = `scale(${currentFacingMode === 'user' ? -currentZoom : currentZoom}, ${currentZoom})`;
+    const transformStr = `scale(${currentFacingMode === 'user' ? -currentZoom : currentZoom}, ${currentZoom})`;
+    cameraVideo.style.transform = transformStr;
+    const bgCanvas = document.getElementById('bgCanvas');
+    if (bgCanvas) bgCanvas.style.transform = transformStr;
 }
 
 function switchCamera() {
@@ -616,7 +785,7 @@ function startCountdown() {
     isCapturing = true;
     btnCapture.disabled = true;
     
-    const selectedTimer = parseInt(document.getElementById('timerSelect').value);
+    const selectedTimer = captureTimer;
     
     if (selectedTimer === 0) {
         capturePhoto();
@@ -653,7 +822,9 @@ function startCountdown() {
 
 function drawVideoCoverToCanvas(video, canvas, isMirror = true) {
     const ctx = canvas.getContext('2d');
-    const videoRatio = video.videoWidth / video.videoHeight;
+    const srcW = video.videoWidth || video.width;
+    const srcH = video.videoHeight || video.height;
+    const videoRatio = srcW / srcH;
     const canvasRatio = canvas.width / canvas.height;
     
     let drawW, drawH, drawX, drawY;
@@ -733,7 +904,8 @@ function capturePhoto() {
     captureCanvas.height = 1200;
     
     const isMirror = currentFacingMode === 'user';
-    drawVideoCoverToCanvas(cameraVideo, captureCanvas, isMirror);
+    const sourceElement = currentVirtualBackground !== 'none' ? document.getElementById('bgCanvas') : cameraVideo;
+    drawVideoCoverToCanvas(sourceElement, captureCanvas, isMirror);
     
     const dataUrl = captureCanvas.toDataURL('image/jpeg', 0.9);
     capturedImages.push(dataUrl);

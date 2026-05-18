@@ -347,6 +347,17 @@ button {
     transition: filter 0.3s ease, transform 0.1s ease-out;
 }
 
+#bgCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    transition: filter 0.3s ease, transform 0.1s ease-out;
+    z-index: 1;
+}
+
 .live-badge {
     position: absolute;
     top: 15px;
@@ -539,27 +550,68 @@ button {
     flex-wrap: wrap;
 }
 
-.timer-select {
+.timer-pills {
     display: flex;
     align-items: center;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
     border: 1px solid var(--card-border);
     border-radius: 20px;
-    padding: 4px 12px;
-    color: var(--text-sub);
-    gap: 5px;
-    font-size: 0.85rem;
+    padding: 4px;
+    gap: 4px;
 }
-.timer-select select {
+.timer-pills i {
+    color: var(--text-sub);
+    margin: 0 4px;
+}
+.timer-pill {
     background: transparent;
     border: none;
-    color: white;
-    outline: none;
+    color: var(--text-sub);
+    padding: 4px 12px;
+    border-radius: 16px;
     font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
 }
-.timer-select select option {
-    background: #0f0f1a;
+.timer-pill:hover {
     color: white;
+}
+.timer-pill.active {
+    background: rgba(181, 108, 255, 0.2);
+    color: white;
+    box-shadow: 0 0 10px rgba(181, 108, 255, 0.3);
+}
+
+.filter-preview-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.filter-preview-box .preview-img {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+.filter-preview-box:hover .preview-img {
+    border-color: rgba(255,255,255,0.5);
+}
+.filter-preview-box.active .preview-img {
+    border-color: var(--active-color);
+    box-shadow: 0 0 15px rgba(181, 108, 255, 0.5);
+}
+.filter-preview-box span {
+    font-size: 0.75rem;
+    color: var(--text-sub);
+    white-space: nowrap;
+}
+.filter-preview-box.active span {
+    color: white;
+    font-weight: bold;
 }
 
 .toggle-btn {

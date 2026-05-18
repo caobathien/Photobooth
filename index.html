@@ -23,6 +23,8 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
     <!-- GIF.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js" defer></script>
+    <!-- MediaPipe Selfie Segmentation -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
     <!-- Audio Elements -->
@@ -186,6 +188,7 @@
 
             <div class="selfie-frame">
                 <video id="cameraVideo" autoplay playsinline muted></video>
+                <canvas id="bgCanvas" class="hidden"></canvas>
                 
                 <!-- Overlays -->
                 <div class="live-badge"><i class="ph-fill ph-record"></i> LIVE</div>
@@ -227,10 +230,11 @@
 
             <div class="camera-bottom">
                 
-                <!-- Filter & Reshape Tabs -->
+                <!-- Filter & Reshape & Background Tabs -->
                 <div class="filter-tabs">
                     <button class="tab-btn active" onclick="switchCameraTab('filters', this)">Bộ lọc</button>
                     <button class="tab-btn" onclick="switchCameraTab('reshape', this)">Sửa mặt</button>
+                    <button class="tab-btn" onclick="switchCameraTab('background', this)">Nền ảo</button>
                 </div>
 
                 <!-- Filter Selection Bar -->
@@ -251,16 +255,44 @@
                     </div>
                 </div>
 
+                <!-- Virtual Background Selection Bar -->
+                <div class="live-filters-wrapper hidden" id="cameraTabBackground">
+                    <div class="live-filters">
+                        <div class="filter-preview-box active" onclick="setVirtualBackground('none')">
+                            <div class="preview-img" style="background:#333;"></div>
+                            <span>Tắt</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('blur')">
+                            <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1557683316-973673baf926?w=100'); background-size:cover;"></div>
+                            <span>Làm mờ</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('color1')">
+                            <div class="preview-img" style="background:linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);"></div>
+                            <span>Hồng nhạt</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('color2')">
+                            <div class="preview-img" style="background:linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);"></div>
+                            <span>Xanh nhạt</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('color3')">
+                            <div class="preview-img" style="background:linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);"></div>
+                            <span>Bạc</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('color4')">
+                            <div class="preview-img" style="background:linear-gradient(to right, #4facfe 0%, #00f2fe 100%);"></div>
+                            <span>Neon xanh</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Toggles -->
                 <div class="camera-toggles">
-                    <div class="timer-select">
+                    <div class="timer-pills">
                         <i class="ph ph-timer"></i>
-                        <select id="timerSelect">
-                            <option value="0">0s</option>
-                            <option value="3" selected>3s</option>
-                            <option value="5">5s</option>
-                            <option value="10">10s</option>
-                        </select>
+                        <button class="timer-pill" onclick="setTimer(0)" id="btnTimer0">0s</button>
+                        <button class="timer-pill active" onclick="setTimer(3)" id="btnTimer3">3s</button>
+                        <button class="timer-pill" onclick="setTimer(5)" id="btnTimer5">5s</button>
+                        <button class="timer-pill" onclick="setTimer(10)" id="btnTimer10">10s</button>
                     </div>
                     
                     <label class="toggle-btn">
