@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tè bé bổng – Photobooth Pro</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Bangers&family=Bebas+Neue&family=Caveat:wght@400..700&family=DM+Sans:opsz,wght@9..40,400;9..40,700&family=Dancing+Script:wght@400..700&family=Lobster&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Oswald:wght@200..700&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Satisfy&family=Space+Grotesk:wght@300..700&family=Syne:wght@400..800&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <!-- Audio Elements -->
+    <audio id="beepAudio" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+    <audio id="shutterAudio" src="https://assets.mixkit.co/active_storage/sfx/238/238-preview.mp3" preload="auto"></audio>
+
+    <div id="app">
+        <!-- ================= MÀN HÌNH 1: CHỌN LAYOUT ================= -->
+        <section id="layoutScreen" class="screen active">
+            <div class="container">
+                <header class="text-center">
+                    <h2 class="brand">Tè bé bổng</h2>
+                    <h1 class="title">Chọn kiểu khung hình</h1>
+                    <p class="subtitle">Bố cục nào phù hợp với bạn hôm nay? ✨</p>
+                </header>
+
+                <div class="layout-cards">
+                    <!-- Card 1 -->
+                    <div class="card" data-layout="2-strip" onclick="selectLayout('2-strip')">
+                        <div class="card-icon"><i class="ph ph-film-strip"></i></div>
+                        <h3>Dải đôi</h3>
+                        <p>2 ảnh kiểu film strip cổ điển</p>
+                    </div>
+
+                    <!-- Card 2 (Premium Support) -->
+                    <div class="card premium-card" data-layout="4-strip" onclick="selectLayout('4-strip')">
+                        <div class="badge premium"><i class="ph-fill ph-heart"></i> ỦNG HỘ TÈ</div>
+                        <div class="card-icon"><i class="ph ph-film-strip"></i></div>
+                        <h3>Dải tư</h3>
+                        <p>4 ảnh dọc như photobooth thật</p>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="card" data-layout="2x2-grid" onclick="selectLayout('2x2-grid')">
+                        <div class="card-icon"><i class="ph ph-squares-four"></i></div>
+                        <h3>Lưới 2x2</h3>
+                        <p>4 ảnh dạng polaroid vuông</p>
+                    </div>
+                </div>
+
+                <div class="actions center">
+                    <button id="btnEnterRoom" class="btn-primary" onclick="goToCamera()" disabled>VÀO PHÒNG CHỤP <i class="ph ph-arrow-right"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Support/Donation Modal -->
+        <div id="supportModal" class="modal hidden">
+            <div class="modal-content text-center">
+                <button class="close-modal" onclick="closeSupportModal()"><i class="ph ph-x"></i></button>
+                <h3 style="color: var(--active-color);"><i class="ph-fill ph-heart" style="color: #ff5fb7;"></i> Ủng hộ Tè nhé!</h3>
+                <p class="mt-2" style="font-size: 0.95rem; line-height: 1.5;">
+                    Mẫu <strong>Dải tư (4 ảnh)</strong> hoàn toàn miễn phí! Nếu bạn yêu thích dự án, hãy quét QR ủng hộ Tè (tùy tâm) để mình có thêm động lực cập nhật nhiều tính năng xịn mịn hơn nha! 💖
+                </p>
+                
+                <div class="qr-container mt-3">
+                    <img src="https://img.vietqr.io/image/MB-0332941152-compact2.png?addInfo=UNG%20HO%20TE%20PHOTOBOOTH&accountName=CAO%20BA%20THIEN" alt="QR Code" id="paymentQR">
+                </div>
+                
+                <p class="mt-2 text-sub" style="font-size: 0.85rem;">STK: <strong>0332941152</strong> - MBBank<br>Tên tài khoản: <strong>CAO BA THIEN</strong></p>
+                
+                <div class="flex-col gap-2 mt-3" style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn-primary" onclick="proceedWithLayout()">Vào phòng chụp ngay 📸</button>
+                    <button class="btn-secondary" onclick="closeSupportModal()" style="justify-content: center;">Để sau</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MÀN HÌNH 2: CAMERA ================= -->
+        <section id="cameraScreen" class="screen flex-col-center">
+            
+            <div class="selfie-header text-center">
+                <h2 class="title" style="font-size: 2rem;">Photobooth Selfie</h2>
+                <p class="subtitle" style="margin-bottom: 1.5rem;">Căn mặt vào khung và nhấn chụp ✨</p>
+            </div>
+
+            <div class="selfie-frame">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+                
+                <!-- Overlays -->
+                <div class="live-badge"><i class="ph-fill ph-record"></i> LIVE</div>
+                
+                <!-- Face Guide Overlay -->
+                <div id="faceGuideOverlay" class="face-guide-overlay hidden">
+                    <div id="faceGuideOval" class="face-guide-oval"></div>
+                    <div id="faceHint" class="face-hint">Đang nhận diện...</div>
+                </div>
+
+                <div class="grid-overlay">
+                    <div class="grid-line v-line left"></div>
+                    <div class="grid-line v-line right"></div>
+                    <div class="grid-line h-line top"></div>
+                    <div class="grid-line h-line bottom"></div>
+                </div>
+                <!-- Hiệu ứng trang trí chỉ nằm ở viền -->
+                <div class="frame-decoration"></div>
+                
+                <div id="cameraPlaceholder" class="camera-placeholder">
+                    <i class="ph ph-camera-slash"></i>
+                    <p>Camera đang tắt</p>
+                </div>
+                <div id="countdown" class="countdown hidden">3</div>
+                <div id="flash" class="flash"></div>
+                <div class="camera-loading hidden">
+                    <i class="ph ph-spinner-gap spin"></i>
+                    <span>Đang mở camera...</span>
+                </div>
+            </div>
+
+            <div class="camera-bottom">
+                
+                <!-- Filter & Reshape Tabs -->
+                <div class="filter-tabs">
+                    <button class="tab-btn active" onclick="switchCameraTab('filters', this)">Bộ lọc</button>
+                    <button class="tab-btn" onclick="switchCameraTab('reshape', this)">Sửa mặt</button>
+                </div>
+
+                <!-- Filter Selection Bar -->
+                <div class="live-filters-wrapper" id="cameraTabFilters">
+                    <div class="live-filters" id="liveFilters">
+                        <!-- JS generated filters -->
+                    </div>
+                </div>
+                
+                <!-- Reshape Selection Bar -->
+                <div class="reshape-wrapper hidden" id="cameraTabReshape">
+                    <div class="reshape-sliders">
+                        <div class="slider-group"><span>Mặt (V-Line)</span> <input type="range" min="0" max="100" value="0"></div>
+                        <div class="slider-group"><span>To mắt</span> <input type="range" min="0" max="100" value="0"></div>
+                        <div class="slider-group"><span>Nhỏ mũi</span> <input type="range" min="0" max="100" value="0"></div>
+                        <div class="slider-group"><span>Miệng</span> <input type="range" min="0" max="100" value="0"></div>
+                        <div class="slider-group"><span>Cằm</span> <input type="range" min="0" max="100" value="0"></div>
+                    </div>
+                </div>
+
+                <!-- Toggles -->
+                <div class="camera-toggles">
+                    <div class="timer-select">
+                        <i class="ph ph-timer"></i>
+                        <select id="timerSelect">
+                            <option value="0">0s</option>
+                            <option value="3" selected>3s</option>
+                            <option value="5">5s</option>
+                            <option value="10">10s</option>
+                        </select>
+                    </div>
+                    
+                    <label class="toggle-btn">
+                        <input type="checkbox" id="autoCaptureToggle" onchange="toggleAutoCapture()"> 
+                        <span class="toggle-label"><i class="ph ph-aperture"></i> Auto</span>
+                    </label>
+                    
+                    <button class="btn-icon upload-btn" onclick="document.getElementById('uploadPhotoInput').click()">
+                        <i class="ph ph-upload-simple"></i> Tải ảnh
+                    </button>
+                    <input type="file" id="uploadPhotoInput" accept="image/*" hidden onchange="handleUploadPhoto(event)">
+                </div>
+
+                <div class="camera-controls selfie-controls">
+                    <button class="btn-icon" onclick="goBackToLayout()"><i class="ph ph-caret-left"></i> Quay lại</button>
+                    
+                    <button id="btnStartCamera" class="btn-secondary" onclick="startCamera()"><i class="ph ph-video-camera"></i> Bật camera</button>
+                    
+                    <button id="btnCapture" class="btn-capture selfie-shutter hidden" onclick="startCountdown()" disabled><div class="inner-circle"></div></button>
+                    
+                    <button id="btnSwitchCamera" class="btn-icon" onclick="switchCamera()" title="Đổi camera"><i class="ph ph-camera-rotate"></i> Đổi cam</button>
+                </div>
+                
+                <div class="shot-status text-center mt-2">
+                    <span class="shot-counter">Đã chụp 0/0</span>
+                </div>
+                
+                <div class="thumbnails mt-2" id="shotThumbnails">
+                    <!-- Thumbnails render here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= MÀN HÌNH 3: CHỈNH SỬA ================= -->
+        <section id="editorScreen" class="screen">
+            <div class="editor-layout">
+                
+                <!-- Preview Area -->
+                <div class="preview-area">
+                    <div class="top-bar-editor">
+                        <button class="btn-icon" onclick="resetShoot()"><i class="ph ph-arrow-counter-clockwise"></i> Chụp lại</button>
+                        <button class="btn-icon" onclick="goBackToLayout()"><i class="ph ph-squares-four"></i> Đổi khung hình</button>
+                    </div>
+                    
+                    <div class="canvas-wrapper" id="canvasWrapper">
+                        <canvas id="finalCanvas"></canvas>
+                        <!-- Interactive layer for drag and drop -->
+                        <div id="interactiveLayer"></div>
+                    </div>
+                </div>
+
+                <!-- Toolbar Area -->
+                <div class="toolbar-area">
+                    <div class="toolbar-tabs">
+                        <button class="tab-btn active" onclick="switchTab('colors')"><i class="ph ph-palette"></i> Màu sắc</button>
+                        <button class="tab-btn" onclick="switchTab('filters')"><i class="ph ph-magic-wand"></i> Bộ lọc</button>
+                        <button class="tab-btn" onclick="switchTab('stickers')"><i class="ph ph-sticker"></i> Sticker</button>
+                        <button class="tab-btn" onclick="switchTab('text')"><i class="ph ph-text-t"></i> Chữ</button>
+                        <button class="tab-btn" onclick="switchTab('effects')"><i class="ph ph-sparkle"></i> Hiệu ứng</button>
+                        <button class="tab-btn" onclick="switchTab('adjust')"><i class="ph ph-sliders"></i> Tinh chỉnh</button>
+                    </div>
+
+                    <div class="tab-content" id="tab-colors" style="display: block;">
+                        <h4>Màu khung nền</h4>
+                        <div class="color-picker-grid">
+                            <div class="color-btn" style="background: #ffffff; border: 1px solid #ccc" onclick="setFrameBg('#ffffff')"></div>
+                            <div class="color-btn" style="background: #000000" onclick="setFrameBg('#000000')"></div>
+                            <div class="color-btn" style="background: #ffd1dc" onclick="setFrameBg('#ffd1dc')"></div>
+                            <div class="color-btn" style="background: #b56cff" onclick="setFrameBg('#b56cff')"></div>
+                            <div class="color-btn" style="background: #aaffc3" onclick="setFrameBg('#aaffc3')"></div>
+                            <div class="color-btn" style="background: #fffacd" onclick="setFrameBg('#fffacd')"></div>
+                            <div class="color-btn gradient-1" onclick="setFrameBg('linear-gradient(135deg, #b56cff, #ff5fb7)')"></div>
+                            <div class="color-btn gradient-2" onclick="setFrameBg('linear-gradient(135deg, #4facfe, #00f2fe)')"></div>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tab-filters">
+                        <h4>Bộ lọc ảnh</h4>
+                        <div class="filter-grid">
+                            <button class="filter-btn active" onclick="applyFilter('none')">Normal</button>
+                            <button class="filter-btn" onclick="applyFilter('beauty')">Beauty</button>
+                            <button class="filter-btn" onclick="applyFilter('vintage')">Vintage</button>
+                            <button class="filter-btn" onclick="applyFilter('film')">Film</button>
+                            <button class="filter-btn" onclick="applyFilter('bw')">B&W</button>
+                            <button class="filter-btn" onclick="applyFilter('warm')">Warm</button>
+                            <button class="filter-btn" onclick="applyFilter('cool')">Cool</button>
+                            <button class="filter-btn" onclick="applyFilter('pink')">Pink</button>
+                            <button class="filter-btn" onclick="applyFilter('sepia')">Sepia</button>
+                            <button class="filter-btn" onclick="applyFilter('contrast')">Contrast</button>
+                            <button class="filter-btn" onclick="applyFilter('dreamy')">Dreamy</button>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tab-stickers">
+                        <h4>Thêm Sticker</h4>
+                        <p class="hint-text">Bấm vào sticker để thêm vào ảnh. Bạn có thể kéo thả để di chuyển.</p>
+                        <div class="sticker-grid" id="stickerList">
+                            <!-- JS will generate stickers -->
+                        </div>
+                        <div class="element-controls hidden" id="elementControls">
+                            <button class="btn-icon danger" onclick="deleteSelectedElement()"><i class="ph ph-trash"></i> Xóa phần tử đang chọn</button>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tab-text">
+                        <h4>Thêm chữ</h4>
+                        <div class="text-input-group">
+                            <input type="text" id="textInput" placeholder="Nhập chữ của bạn..." oninput="updateSelectedTextProperty('content', this.value)">
+                            <select id="fontSelect" onchange="updateSelectedTextProperty('font', this.value)">
+                                <option value="Syne">Syne (Mặc định)</option>
+                                <option value="DM Sans">DM Sans (Cơ bản)</option>
+                                <option value="Montserrat">Montserrat (Hiện đại)</option>
+                                <option value="Playfair Display">Playfair (Thanh lịch)</option>
+                                <option value="Pacifico">Pacifico (Tay viết mềm)</option>
+                                <option value="Dancing Script">Dancing Script (Mềm mại)</option>
+                                <option value="Caveat">Caveat (Ghi chú)</option>
+                                <option value="Satisfy">Satisfy (Ký tên)</option>
+                                <option value="Bebas Neue">Bebas Neue (In hoa mạnh)</option>
+                                <option value="Oswald">Oswald (In hoa dọc)</option>
+                                <option value="Bangers">Bangers (Truyện tranh)</option>
+                                <option value="Permanent Marker">Permanent Marker (Bút lông)</option>
+                                <option value="Abril Fatface">Abril (Báo chí)</option>
+                            </select>
+                            
+                            <div class="color-picker-wrap">
+                                <label for="textColor">Thay đổi màu chữ:</label>
+                                <input type="color" id="textColor" value="#ff3366" oninput="updateSelectedTextProperty('color', this.value)">
+                            </div>
+                            
+                            <button class="btn-secondary" onclick="addText()"><i class="ph ph-plus"></i> Thêm</button>
+                        </div>
+                        <div class="suggestions">
+                            <span onclick="setTextInput('Best Day Ever')">Best Day Ever</span>
+                            <span onclick="setTextInput('Lovely Moments')">Lovely Moments</span>
+                            <span onclick="setTextInput('Photobooth Pro')">Photobooth Pro</span>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tab-effects">
+                        <h4>Hiệu ứng trang trí</h4>
+                        <div class="effect-grid">
+                            <button class="effect-btn active" onclick="setOverlay('none')">Không có</button>
+                            <button class="effect-btn" onclick="setOverlay('sparkle')">Lấp lánh</button>
+                            <button class="effect-btn" onclick="setOverlay('grain')">Hạt Film</button>
+                            <button class="effect-btn" onclick="setOverlay('hearts')">Trái tim</button>
+                            <button class="effect-btn" onclick="setOverlay('stars')">Sao nhỏ</button>
+                            <button class="effect-btn" onclick="setOverlay('bubbles')">Bong bóng</button>
+                            <button class="effect-btn" onclick="setOverlay('flowers')">Hoa cúc</button>
+                            <button class="effect-btn" onclick="setOverlay('butterflies')">Bươm bướm</button>
+                            <button class="effect-btn" onclick="setOverlay('music')">Nốt nhạc</button>
+                        </div>
+                        <div class="toggle-group mt-3">
+                            <label>In ngày tháng (Date stamp)</label>
+                            <label class="switch">
+                                <input type="checkbox" id="dateStampToggle" onchange="toggleDateStamp()">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tab-adjust">
+                        <h4>Điều chỉnh ảnh</h4>
+                        <div class="slider-group">
+                            <label>Độ sáng (Brightness)</label>
+                            <input type="range" min="50" max="150" value="100" id="adj-brightness" oninput="updateAdjustments()">
+                        </div>
+                        <div class="slider-group">
+                            <label>Độ tương phản (Contrast)</label>
+                            <input type="range" min="50" max="150" value="100" id="adj-contrast" oninput="updateAdjustments()">
+                        </div>
+                        <div class="slider-group">
+                            <label>Độ bão hòa (Saturation)</label>
+                            <input type="range" min="0" max="200" value="100" id="adj-saturation" oninput="updateAdjustments()">
+                        </div>
+                        <div class="slider-group">
+                            <label>Độ mờ (Blur)</label>
+                            <input type="range" min="0" max="10" value="0" id="adj-blur" oninput="updateAdjustments()">
+                        </div>
+                    </div>
+
+                    <div class="download-section">
+                        <button class="btn-primary full-width" onclick="downloadImage()"><i class="ph ph-download-simple"></i> LƯU ẢNH VỀ MÁY</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Toast Notification -->
+        <div id="toast" class="toast">Thông báo</div>
+
+        <!-- Hidden canvas for raw captures -->
+        <canvas id="captureCanvas" hidden></canvas>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+</html>
