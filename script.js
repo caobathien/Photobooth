@@ -1,10 +1,13 @@
 // ================= STATE VARIABLES =================
 let selectedLayout = null; // '2-strip', '4-strip', '2x2-grid'
 let maxImages = 0;
-let capturedImages = []; // Stores data URLs
+let capturedImages = []; // Stores all 6 captured data URLs
+let selectedImages = []; // Stores selected images to be put in template
+let selectedSelectionIndices = []; // Indices of selected photos (from 0 to 5)
 let cameraStream = null;
 let currentFacingMode = 'user';
 let isCapturing = false;
+let currentZoom = 1;
 
 // Camera Filters & Beauty Settings
 const CAMERA_FILTERS = {
@@ -85,6 +88,7 @@ const stickersList = ['❤️','✨','🌸','🐰','🐱','⭐','💖','🎀','�
 const screens = {
     layout: document.getElementById('layoutScreen'),
     camera: document.getElementById('cameraScreen'),
+    selection: document.getElementById('selectionScreen'),
     editor: document.getElementById('editorScreen')
 };
 
@@ -117,6 +121,53 @@ function init() {
     document.addEventListener('dblclick', function(event) {
         event.preventDefault();
     }, { passive: false });
+
+    initPinchToZoom();
+}
+
+// ================= PINCH TO ZOOM GESTURE =================
+function initPinchToZoom() {
+    const selfieFrame = document.querySelector('.selfie-frame');
+    if (!selfieFrame) return;
+
+    let initialPinchDistance = null;
+    let initialZoom = 1;
+
+    function getPinchDistance(e) {
+        if (e.touches.length < 2) return null;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    selfieFrame.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            initialPinchDistance = getPinchDistance(e);
+            initialZoom = currentZoom;
+        }
+    });
+
+    selfieFrame.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && initialPinchDistance) {
+            e.preventDefault(); // Ngăn trình duyệt cuộn trang
+            const currentDistance = getPinchDistance(e);
+            const scale = currentDistance / initialPinchDistance;
+            let newZoom = initialZoom * scale;
+            
+            if (newZoom < 0.5) newZoom = 0.5;
+            if (newZoom > 3) newZoom = 3;
+            
+            // Limit decimal places to make slider sync smooth
+            newZoom = Math.round(newZoom * 10) / 10;
+            updateZoom(newZoom);
+        }
+    }, { passive: false });
+
+    selfieFrame.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+            initialPinchDistance = null;
+        }
+    });
 }
 
 // ================= LAYOUT SCREEN =================
@@ -252,10 +303,10 @@ function handleUploadPhoto(event) {
             capturedImages.push(dataUrl);
             updateShotCounter();
             
-            if (capturedImages.length >= maxImages) {
+            if (capturedImages.length >= 6) {
                 setTimeout(() => {
                     stopCamera();
-                    goToEditor();
+                    goToSelection();
                 }, 500);
             }
         };
@@ -368,7 +419,7 @@ function updateFaceGuide(detections) {
         oval.classList.add('aligned');
         hint.classList.add('aligned');
         
-        if (autoCaptureEnabled && !isCapturing) {
+        if (autoCaptureEnabled && !isCapturing && capturedImages.length > 0) {
             if (alignTime === 0) alignTime = Date.now();
             else if (Date.now() - alignTime > 1500) {
                 startCountdown();
@@ -402,6 +453,13 @@ async function startCamera() {
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
         cameraVideo.srcObject = cameraStream;
         
+        // Reset zoom UI on start
+        currentZoom = 1;
+        document.getElementById('zoomSlider').value = 1;
+        document.getElementById('zoomLabel').textContent = '1.0x';
+        applyVideoTransform();
+        document.getElementById('zoomContainer').classList.remove('hidden');
+        
         // Wait for video to load
         cameraVideo.onloadedmetadata = () => {
             document.querySelector('.camera-loading').classList.add('hidden');
@@ -433,16 +491,37 @@ function stopCamera() {
         faceDetectionRAF = null;
     }
     cameraVideo.srcObject = null;
+    document.getElementById('zoomContainer').classList.add('hidden');
+}
+
+// ================= ZOOM LOGIC =================
+function updateZoom(value) {
+    currentZoom = parseFloat(value);
+    document.getElementById('zoomLabel').textContent = currentZoom.toFixed(1) + 'x';
+    document.getElementById('zoomSlider').value = currentZoom;
+    applyVideoTransform();
+}
+
+function adjustZoom(delta) {
+    let newZoom = currentZoom + delta;
+    if (newZoom < 0.5) newZoom = 0.5;
+    if (newZoom > 3) newZoom = 3;
+    updateZoom(newZoom);
+}
+
+function applyVideoTransform() {
+    if (!cameraVideo) return;
+    cameraVideo.style.transform = `scale(${currentFacingMode === 'user' ? -currentZoom : currentZoom}, ${currentZoom})`;
 }
 
 function switchCamera() {
     currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-    cameraVideo.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+    applyVideoTransform();
     startCamera();
 }
 
 function updateShotCounter() {
-    shotCounter.textContent = `Đã chụp ${capturedImages.length}/${maxImages}`;
+    shotCounter.textContent = `Đã chụp ${capturedImages.length}/6`;
     
     // Update thumbnails
     thumbnailsContainer.innerHTML = '';
@@ -452,6 +531,28 @@ function updateShotCounter() {
         img.className = 'thumb-item';
         thumbnailsContainer.appendChild(img);
     });
+}
+
+// Giọng nói đếm ngược tiếng Việt sử dụng Web Speech API
+function speakVietnamese(text) {
+    if ('speechSynthesis' in window) {
+        // Hủy bất kỳ giọng nói nào đang phát trước đó để tránh đè âm thanh
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'vi-VN';
+        
+        // Cố gắng tìm giọng đọc tiếng Việt chuẩn
+        const voices = window.speechSynthesis.getVoices();
+        const viVoice = voices.find(voice => voice.lang.includes('vi'));
+        if (viVoice) {
+            utterance.voice = viVoice;
+        }
+        
+        utterance.rate = 1.3; // Tăng tốc độ đọc một chút cho đúng nhịp đếm ngược
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+    }
 }
 
 function startCountdown() {
@@ -471,10 +572,8 @@ function startCountdown() {
     countdownEl.classList.remove('hidden');
     countdownEl.classList.add('pop');
     
-    if(beepAudio.readyState >= 2) {
-        beepAudio.currentTime = 0;
-        beepAudio.play().catch(e => console.log(e));
-    }
+    // Đọc số đầu tiên
+    speakVietnamese(counter.toString());
     
     const timer = setInterval(() => {
         counter--;
@@ -484,10 +583,9 @@ function startCountdown() {
             countdownEl.classList.remove('pop');
             void countdownEl.offsetWidth; // trigger reflow
             countdownEl.classList.add('pop');
-            if(beepAudio.readyState >= 2) {
-                beepAudio.currentTime = 0;
-                beepAudio.play().catch(e => console.log(e));
-            }
+            
+            // Đọc số tiếp theo
+            speakVietnamese(counter.toString());
         } else {
             clearInterval(timer);
             countdownEl.classList.add('hidden');
@@ -517,6 +615,12 @@ function drawVideoCoverToCanvas(video, canvas, isMirror = true) {
     }
     
     ctx.save();
+    
+    // Apply zoom scale from center
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(currentZoom, currentZoom);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    
     if (isMirror) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
@@ -562,10 +666,10 @@ function capturePhoto() {
     flashEl.classList.add('active');
     setTimeout(() => flashEl.classList.remove('active'), 300);
     
-    // Play shutter
-    if(shutterAudio.readyState >= 2) {
-        shutterAudio.currentTime = 0;
-        shutterAudio.play().catch(e => console.log(e));
+    // Play beep sound instead of shutter click
+    if(beepAudio.readyState >= 2) {
+        beepAudio.currentTime = 0;
+        beepAudio.play().catch(e => console.log(e));
     }
     
     // Capture 3:4 canvas
@@ -580,27 +684,124 @@ function capturePhoto() {
     
     updateShotCounter();
     
-    if (capturedImages.length >= maxImages) {
+    if (capturedImages.length >= 6) {
         setTimeout(() => {
             stopCamera();
-            goToEditor();
+            goToSelection();
         }, 1000);
     } else {
         isCapturing = false;
         btnCapture.disabled = false;
+        
+        // Tự động kích hoạt đếm ngược chụp tấm tiếp theo sau 2 giây chuẩn bị dáng
+        setTimeout(() => {
+            if (cameraStream && screens.camera.classList.contains('active') && !isCapturing) {
+                startCountdown();
+            }
+        }, 2000); // 2000ms (2 giây) chuẩn bị tạo dáng mới
     }
 }
 
 function resetShoot() {
     capturedImages = [];
+    selectedImages = [];
+    selectedSelectionIndices = [];
     isCapturing = false;
+    
+    // Tắt tự động chụp để chờ người dùng tự bấm chụp
+    autoCaptureEnabled = false;
+    const autoToggle = document.getElementById('autoCaptureToggle');
+    if (autoToggle) autoToggle.checked = false;
+    
     updateShotCounter();
-    if (screens.editor.classList.contains('active')) {
+    if (screens.editor.classList.contains('active') || screens.selection.classList.contains('active')) {
         draggableElements = [];
         renderInteractiveElements();
         switchScreen('camera');
         startCamera();
     }
+}
+
+// ================= SELECTION SCREEN =================
+function goToSelection() {
+    switchScreen('selection');
+    selectedSelectionIndices = [];
+    
+    // Cập nhật tiêu đề hướng dẫn chọn ảnh
+    const subtitle = document.getElementById('selectionSubtitle');
+    subtitle.textContent = `Chọn 0/${maxImages} bức ảnh bạn thích nhất ✨`;
+    
+    document.getElementById('btnConfirmSelection').disabled = true;
+    
+    renderSelectionGrid();
+}
+
+function renderSelectionGrid() {
+    const grid = document.getElementById('photoSelectionGrid');
+    grid.innerHTML = '';
+    
+    capturedImages.forEach((src, index) => {
+        const card = document.createElement('div');
+        card.className = 'selection-card';
+        card.onclick = () => toggleSelectPhoto(index);
+        
+        const img = document.createElement('img');
+        img.src = src;
+        card.appendChild(img);
+        
+        const num = document.createElement('div');
+        num.className = 'selection-number';
+        
+        const selectedIndex = selectedSelectionIndices.indexOf(index);
+        if (selectedIndex > -1) {
+            card.classList.add('selected');
+            num.textContent = selectedIndex + 1;
+        } else {
+            num.textContent = '';
+        }
+        card.appendChild(num);
+        
+        grid.appendChild(card);
+    });
+}
+
+function toggleSelectPhoto(index) {
+    const selIndex = selectedSelectionIndices.indexOf(index);
+    if (selIndex > -1) {
+        // Bỏ chọn
+        selectedSelectionIndices.splice(selIndex, 1);
+    } else {
+        // Chọn
+        if (selectedSelectionIndices.length < maxImages) {
+            selectedSelectionIndices.push(index);
+        } else {
+            // Đã đạt giới hạn: tự động bỏ phần tử đầu tiên và thêm mới vào sau
+            selectedSelectionIndices.shift();
+            selectedSelectionIndices.push(index);
+        }
+    }
+    
+    // Cập nhật số lượng ảnh đã chọn
+    const subtitle = document.getElementById('selectionSubtitle');
+    subtitle.textContent = `Chọn ${selectedSelectionIndices.length}/${maxImages} bức ảnh bạn thích nhất ✨`;
+    
+    // Bật/tắt nút Xác nhận
+    const btn = document.getElementById('btnConfirmSelection');
+    if (selectedSelectionIndices.length === maxImages) {
+        btn.disabled = false;
+    } else {
+        btn.disabled = true;
+    }
+    
+    renderSelectionGrid();
+}
+
+function confirmPhotoSelection() {
+    if (selectedSelectionIndices.length !== maxImages) return;
+    
+    // Gán danh sách ảnh được chọn theo thứ tự người dùng nhấp chọn
+    selectedImages = selectedSelectionIndices.map(idx => capturedImages[idx]);
+    goToEditor();
 }
 
 // ================= EDITOR SCREEN =================
@@ -830,12 +1031,12 @@ async function renderPhotobooth() {
 
     // 2. Draw Images (Object-fit cover)
     for (let i = 0; i < maxImages; i++) {
-        if (!capturedImages[i]) continue;
+        if (!selectedImages[i]) continue;
         
         const rect = imgRects[i];
         
         const img = new Image();
-        img.src = capturedImages[i];
+        img.src = selectedImages[i];
         await new Promise(r => img.onload = r);
         
         // Draw with border radius simulation using clipping
