@@ -1218,7 +1218,25 @@ input:checked + .slider:before { transform: translateX(26px); }
     height: 200px;
     display: block;
 }
+.qr-container canvas {
+    display: block;
+    max-width: 200px;
+    max-height: 200px;
+}
 
+/* Spinner animation */
+.spin {
+    display: inline-block;
+    animation: spinAnim 1s linear infinite;
+}
+@keyframes spinAnim {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
+.text-center { text-align: center; }
 /* Brand Logo Styling */
 .brand-container {
     display: flex;
