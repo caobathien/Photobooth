@@ -10,6 +10,7 @@ let currentFacingMode = 'user';
 let isCapturing = false;
 let currentZoom = 1;
 let isPremiumUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
+let isMirrorMode = false;
 
 // Camera Filters & Beauty Settings
 const CAMERA_FILTERS = {
@@ -382,6 +383,11 @@ function toggleAutoCapture() {
     autoCaptureEnabled = document.getElementById('autoCaptureToggle').checked;
 }
 
+function toggleMirrorMode() {
+    isMirrorMode = document.getElementById('mirrorToggle').checked;
+    applyVideoTransform();
+}
+
 function switchCameraTab(tabName, btnElement) {
     document.querySelectorAll('.filter-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
     btnElement.classList.add('active');
@@ -697,7 +703,7 @@ function updateFaceGuide(detections) {
     let diffX = faceCenterX - targetX;
     const diffY = faceCenterY - targetY;
     
-    if (currentFacingMode === 'user') {
+    if (isMirrorMode) {
         diffX = -diffX;
     }
     
@@ -824,10 +830,18 @@ function adjustZoom(delta) {
 
 function applyVideoTransform() {
     if (!cameraVideo) return;
-    const transformStr = `scale(${currentFacingMode === 'user' ? -currentZoom : currentZoom}, ${currentZoom})`;
+    const transformStr = `scale(${isMirrorMode ? -currentZoom : currentZoom}, ${currentZoom})`;
     cameraVideo.style.transform = transformStr;
     const bgCanvas = document.getElementById('bgCanvas');
     if (bgCanvas) bgCanvas.style.transform = transformStr;
+
+    if (isMirrorMode) {
+        cameraVideo.classList.add('mirror');
+        if (bgCanvas) bgCanvas.classList.add('mirror');
+    } else {
+        cameraVideo.classList.remove('mirror');
+        if (bgCanvas) bgCanvas.classList.remove('mirror');
+    }
 }
 
 function switchCamera() {
@@ -999,7 +1013,7 @@ function capturePhoto() {
     captureCanvas.width = 900;
     captureCanvas.height = 1200;
     
-    const isMirror = currentFacingMode === 'user';
+    const isMirror = isMirrorMode;
     const sourceElement = currentVirtualBackground !== 'none' ? document.getElementById('bgCanvas') : cameraVideo;
     drawVideoCoverToCanvas(sourceElement, captureCanvas, isMirror);
     
