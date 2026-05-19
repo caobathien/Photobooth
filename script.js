@@ -332,11 +332,17 @@ function goToCamera() {
     if (!selectedLayout) return;
     switchScreen('camera');
     updateShotCounter();
+    
+    // Auto start camera on mobile
+    if (window.innerWidth <= 767) {
+        startCamera();
+    }
 }
 
 function goBackToLayout() {
     stopCamera();
     resetShoot();
+    closeAllMobileDrawers();
     selectedLayout = null;
     selectedTheme = null;
     document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
@@ -351,22 +357,46 @@ function goBackToLayout() {
 // ================= CAMERA SCREEN =================
 function renderLiveFilters() {
     const container = document.getElementById('liveFilters');
-    if (!container) return;
-    container.innerHTML = '';
-    
-    Object.entries(CAMERA_FILTERS).forEach(([id, filter]) => {
-        const btn = document.createElement('div');
-        btn.className = `filter-pill ${id === activeCameraFilter ? 'active' : ''}`;
-        btn.textContent = filter.name;
-        btn.onclick = () => selectCameraFilter(id);
-        container.appendChild(btn);
-    });
+    if (container) {
+        container.innerHTML = '';
+        Object.entries(CAMERA_FILTERS).forEach(([id, filter]) => {
+            const btn = document.createElement('div');
+            btn.className = `filter-pill ${id === activeCameraFilter ? 'active' : ''}`;
+            btn.textContent = filter.name;
+            btn.onclick = () => selectCameraFilter(id);
+            container.appendChild(btn);
+        });
+    }
+
+    // Populate mobile filter drawer
+    const mobileContainer = document.getElementById('mobileFilterDrawer');
+    if (mobileContainer) {
+        mobileContainer.innerHTML = '';
+        Object.entries(CAMERA_FILTERS).forEach(([id, filter]) => {
+            const btn = document.createElement('div');
+            btn.className = `filter-pill ${id === activeCameraFilter ? 'active' : ''}`;
+            btn.textContent = filter.name;
+            btn.onclick = () => {
+                selectCameraFilter(id);
+                // Highlight active tool button if active
+                const mobBtn = document.getElementById('btnMobileFilter');
+                if (mobBtn) mobBtn.classList.add('active');
+            };
+            mobileContainer.appendChild(btn);
+        });
+    }
 }
 
 function selectCameraFilter(id) {
     activeCameraFilter = id;
     renderLiveFilters();
     cameraVideo.style.filter = CAMERA_FILTERS[id].css;
+    
+    // Update mobile filter name label inside frame
+    const mobFilterLabel = document.getElementById('mobileFilterName');
+    if (mobFilterLabel) {
+        mobFilterLabel.textContent = CAMERA_FILTERS[id].name;
+    }
     
     // Create/update beauty overlay
     let beautyOverlay = document.getElementById('beautyOverlay');
@@ -580,7 +610,12 @@ function cancelCountdown() {
     }
     
     isCapturing = false;
-    btnCapture.disabled = false;
+    
+    const pcCaptureBtn = document.getElementById('btnCapture');
+    const mobileCaptureBtn = document.getElementById('mobileCaptureBtn');
+    if (pcCaptureBtn) pcCaptureBtn.disabled = false;
+    if (mobileCaptureBtn) mobileCaptureBtn.disabled = false;
+    
     countdownEl.classList.add('hidden');
     document.getElementById('btnCancelCountdown').classList.add('hidden');
     
@@ -786,6 +821,13 @@ async function startCamera() {
             document.getElementById('btnCapture').classList.remove('hidden');
             btnCapture.disabled = false;
             
+            // Enable mobile capture button
+            const mobCaptureBtn = document.getElementById('mobileCaptureBtn');
+            if (mobCaptureBtn) {
+                mobCaptureBtn.disabled = false;
+                mobCaptureBtn.classList.remove('hidden');
+            }
+            
             if (faceDetector) {
                 document.getElementById('faceGuideOverlay').classList.remove('hidden');
                 detectFaceLoop();
@@ -860,6 +902,24 @@ function updateShotCounter() {
         img.className = 'thumb-item';
         thumbnailsContainer.appendChild(img);
     });
+
+    // Mobile specific sync
+    const mobileShotCount = document.getElementById('mobileShotCount');
+    const mobileTotalShot = document.getElementById('mobileTotalShot');
+    const mobileThumbnailStrip = document.getElementById('mobileThumbnailStrip');
+    
+    if (mobileShotCount && mobileTotalShot && mobileThumbnailStrip) {
+        mobileShotCount.textContent = capturedImages.length;
+        mobileTotalShot.textContent = 6;
+        
+        mobileThumbnailStrip.innerHTML = '';
+        capturedImages.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'thumb-item';
+            mobileThumbnailStrip.appendChild(img);
+        });
+    }
 }
 
 function speakVietnamese(text) {
@@ -884,7 +944,11 @@ function speakVietnamese(text) {
 function startCountdown() {
     if (isCapturing) return;
     isCapturing = true;
-    btnCapture.disabled = true;
+    
+    const pcCaptureBtn = document.getElementById('btnCapture');
+    const mobileCaptureBtn = document.getElementById('mobileCaptureBtn');
+    if (pcCaptureBtn) pcCaptureBtn.disabled = true;
+    if (mobileCaptureBtn) mobileCaptureBtn.disabled = true;
     
     const selectedTimer = captureTimer;
     
@@ -1029,14 +1093,20 @@ function capturePhoto() {
         }, 1000);
     } else {
         isCapturing = false;
-        btnCapture.disabled = false;
         
-        // Auto capture delay to adjust pose
-        setTimeout(() => {
-            if (cameraStream && screens.camera.classList.contains('active') && !isCapturing) {
-                startCountdown();
-            }
-        }, 2200);
+        const pcCaptureBtn = document.getElementById('btnCapture');
+        const mobileCaptureBtn = document.getElementById('mobileCaptureBtn');
+        if (pcCaptureBtn) pcCaptureBtn.disabled = false;
+        if (mobileCaptureBtn) mobileCaptureBtn.disabled = false;
+        
+        // Auto capture delay to adjust pose: only on PC, or if autoCaptureEnabled is true
+        if (window.innerWidth > 767 || autoCaptureEnabled) {
+            setTimeout(() => {
+                if (cameraStream && screens.camera.classList.contains('active') && !isCapturing) {
+                    startCountdown();
+                }
+            }, 2200);
+        }
     }
 }
 
@@ -2273,6 +2343,95 @@ function showToast(msg) {
     setTimeout(() => {
         toastEl.classList.remove('show');
     }, 3000);
+}
+
+// ================= MOBILE LIVE CAMERA FUNCTIONS =================
+function toggleMobileBeauty() {
+    const drawer = document.getElementById('mobileBeautyDrawer');
+    const isActive = drawer.classList.contains('open');
+    closeAllMobileDrawers();
+    if (!isActive) {
+        drawer.classList.add('open');
+        document.getElementById('btnMobileBeauty').classList.add('active');
+    }
+}
+
+function toggleMobileFilterDrawer() {
+    const drawer = document.getElementById('mobileFilterDrawer');
+    const isActive = drawer.classList.contains('open');
+    closeAllMobileDrawers();
+    if (!isActive) {
+        drawer.classList.add('open');
+        document.getElementById('btnMobileFilter').classList.add('active');
+    }
+}
+
+function toggleMobileTimerDrawer() {
+    const drawer = document.getElementById('mobileTimerDrawer');
+    const isActive = drawer.classList.contains('open');
+    closeAllMobileDrawers();
+    if (!isActive) {
+        drawer.classList.add('open');
+        document.getElementById('btnMobileTimer').classList.add('active');
+    }
+}
+
+function toggleMobileBgDrawer() {
+    const drawer = document.getElementById('mobileBgDrawer');
+    const isActive = drawer.classList.contains('open');
+    closeAllMobileDrawers();
+    if (!isActive) {
+        drawer.classList.add('open');
+        document.getElementById('btnMobileBg').classList.add('active');
+    }
+}
+
+function toggleMobileMirrorMode() {
+    isMirrorMode = !isMirrorMode;
+    
+    // Sync PC mirror checkbox if it exists
+    const mirrorToggle = document.getElementById('mirrorToggle');
+    if (mirrorToggle) mirrorToggle.checked = isMirrorMode;
+    
+    const mobBtn = document.getElementById('btnMobileMirror');
+    if (mobBtn) {
+        if (isMirrorMode) mobBtn.classList.add('active');
+        else mobBtn.classList.remove('active');
+    }
+    
+    applyVideoTransform();
+    showToast(isMirrorMode ? 'Đã bật chế độ lật gương ⇄' : 'Đã tắt chế độ lật gương ⇄');
+}
+
+function selectMobileBg(boxEl) {
+    document.querySelectorAll('.mobile-bg-drawer .filter-preview-box').forEach(box => box.classList.remove('active'));
+    if (boxEl) boxEl.classList.add('active');
+}
+
+function closeAllMobileDrawers() {
+    const drawers = ['mobileFilterDrawer', 'mobileTimerDrawer', 'mobileBgDrawer', 'mobileBeautyDrawer'];
+    drawers.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('open');
+    });
+    
+    const btns = ['btnMobileBeauty', 'btnMobileFilter', 'btnMobileTimer', 'btnMobileBg'];
+    btns.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+    });
+}
+
+function setMobileTimer(seconds, pillEl) {
+    setTimer(seconds);
+    document.querySelectorAll('.mobile-timer-drawer .timer-pill').forEach(btn => btn.classList.remove('active'));
+    if (pillEl) pillEl.classList.add('active');
+    showToast(`Hẹn giờ chụp: ${seconds === 0 ? 'Tắt' : seconds + ' giây'}`);
+}
+
+function handleMobileCapture() {
+    if (isCapturing) return;
+    startCountdown();
 }
 
 // Bind load listeners

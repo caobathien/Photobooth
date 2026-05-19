@@ -227,6 +227,9 @@
                 <!-- Overlays -->
                 <div class="live-badge"><i class="ph-fill ph-record"></i> LIVE</div>
                 
+                <!-- Mobile Overlays -->
+                <div class="current-filter-name" id="mobileFilterName">Original</div>
+                
                 <!-- Face Guide Overlay -->
                 <div id="faceGuideOverlay" class="face-guide-overlay hidden">
                     <div id="faceGuideOval" class="face-guide-oval"></div>
@@ -260,10 +263,102 @@
                     <div class="zoom-btn" onclick="adjustZoom(-0.1)"><i class="ph ph-minus"></i></div>
                     <div class="zoom-label" id="zoomLabel">1.0x</div>
                 </div>
+
+                <!-- Mobile Live Tools Sidebar -->
+                <div class="mobile-live-tools">
+                    <button class="live-tool-btn" id="btnMobileBeauty" onclick="toggleMobileBeauty()"><span style="font-size: 18px;">✨</span></button>
+                    <button class="live-tool-btn" id="btnMobileFilter" onclick="toggleMobileFilterDrawer()"><span style="font-size: 18px;">🎨</span></button>
+                    <button class="live-tool-btn" id="btnMobileTimer" onclick="toggleMobileTimerDrawer()"><span style="font-size: 18px;">⏱</span></button>
+                    <button class="live-tool-btn" id="btnMobileBg" onclick="toggleMobileBgDrawer()"><span style="font-size: 18px;">🖼</span></button>
+                    <button class="live-tool-btn" id="btnMobileMirror" onclick="toggleMobileMirrorMode()"><span style="font-size: 18px;">⇄</span></button>
+                </div>
             </div>
 
             <!-- Cancel Countdown Floating Overlay -->
             <button id="btnCancelCountdown" class="btn-secondary hidden" onclick="cancelCountdown()" style="position:absolute; top:20px; right:20px; z-index:20; background:rgba(255,77,77,0.3); border-color:var(--danger); color:white;"><i class="ph ph-x-circle"></i> Hủy đếm ngược</button>
+
+            <!-- ================= MOBILE ONLY LIVE INTERFACE DRAWERS & CONTROLS ================= -->
+            <div class="mobile-filter-drawer" id="mobileFilterDrawer">
+                <!-- Populated dynamically by JS -->
+            </div>
+
+            <div class="mobile-timer-drawer" id="mobileTimerDrawer">
+                <button class="timer-pill active" id="btnMobileTimer0" onclick="setMobileTimer(0, this)">Off</button>
+                <button class="timer-pill" id="btnMobileTimer3" onclick="setMobileTimer(3, this)">3s</button>
+                <button class="timer-pill" id="btnMobileTimer5" onclick="setMobileTimer(5, this)">5s</button>
+                <button class="timer-pill" id="btnMobileTimer10" onclick="setMobileTimer(10, this)">10s</button>
+            </div>
+
+            <div class="mobile-bg-drawer" id="mobileBgDrawer">
+                <div class="filter-preview-box active" onclick="setVirtualBackground('none'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:#333;"></div>
+                    <span>Tắt</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('blur'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:linear-gradient(135deg, #555, #222); display:flex; align-items:center; justify-content:center; font-size:12px;">🌫️</div>
+                    <span>Làm mờ</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('studio-pink'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);"></div>
+                    <span>Studio Pink</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('neon-purple'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:linear-gradient(135deg, #1a0030 0%, #8f00ff 100%);"></div>
+                    <span>Neon Purple</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('sky-blue'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);"></div>
+                    <span>Sky Blue</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('flower'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=80&q=50'); background-size:cover;"></div>
+                    <span>Flower</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('christmas'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1544816155-12df9643f363?w=80&q=50'); background-size:cover;"></div>
+                    <span>Christmas</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('tet-red'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=80&q=50'); background-size:cover;"></div>
+                    <span>Tết Đỏ</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('gradient-dream'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #a1c4fd 100%);"></div>
+                    <span>Dreamy</span>
+                </div>
+                <div class="filter-preview-box" onclick="setVirtualBackground('cafe'); selectMobileBg(this)">
+                    <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=80&q=50'); background-size:cover;"></div>
+                    <span>Cafe</span>
+                </div>
+                <div class="filter-preview-box" onclick="triggerCustomBgUpload(); selectMobileBg(this)">
+                    <div class="preview-img" style="background:#444; display:flex; align-items:center; justify-content:center; font-size:18px; border:1px dashed #aaa;">➕</div>
+                    <span>Tự tải</span>
+                </div>
+            </div>
+
+            <div class="mobile-beauty-drawer" id="mobileBeautyDrawer">
+                <div class="reshape-sliders">
+                    <div class="slider-group"><span>Mặt (V-Line)</span> <input type="range" min="0" max="100" value="0"></div>
+                    <div class="slider-group"><span>To mắt</span> <input type="range" min="0" max="100" value="0"></div>
+                    <div class="slider-group"><span>Nhỏ mũi</span> <input type="range" min="0" max="100" value="0"></div>
+                    <div class="slider-group"><span>Miệng</span> <input type="range" min="0" max="100" value="0"></div>
+                    <div class="slider-group"><span>Cằm</span> <input type="range" min="0" max="100" value="0"></div>
+                </div>
+            </div>
+
+            <div class="mobile-camera-bottom">
+                <button class="mobile-small-btn" id="mobileBackBtn" onclick="goBackToLayout()"><i class="ph ph-arrow-left"></i></button>
+                <button class="mobile-capture-btn" id="mobileCaptureBtn" onclick="handleMobileCapture()"></button>
+                <button class="mobile-small-btn" id="mobileSwitchCameraBtn" onclick="switchCamera()"><i class="ph ph-camera-rotate"></i></button>
+            </div>
+
+            <div class="mobile-shot-info">
+                Đã chụp <span id="mobileShotCount">0</span>/<span id="mobileTotalShot">4</span>
+            </div>
+
+            <div class="mobile-thumbnail-strip" id="mobileThumbnailStrip">
+                <!-- Populated dynamically by JS -->
+            </div>
 
             <div class="camera-bottom">
                 
