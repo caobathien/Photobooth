@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tè bé bổng – Photobooth Pro</title>
+    <title>Tè bé bổng – Photobooth Pro Premium</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,107 +46,141 @@
 
                 <!-- Layout Category Tabs -->
                 <div class="layout-category-tabs">
-                    <button class="cat-tab active" onclick="switchLayoutCategory('free', this)">🆓 Free</button>
-                    <button class="cat-tab" onclick="switchLayoutCategory('premium', this)">💎 Premium</button>
-                    <button class="cat-tab" onclick="switchLayoutCategory('seasonal', this)">🎉 Seasonal</button>
+                    <button id="tabCatFree" class="cat-tab active" onclick="switchLayoutCategory('free', this)">🆓 Free</button>
+                    <button id="tabCatPremium" class="cat-tab" onclick="switchLayoutCategory('premium', this)">💎 Premium</button>
+                    <button id="tabCatSeasonal" class="cat-tab" onclick="switchLayoutCategory('seasonal', this)">🎉 Seasonal</button>
                 </div>
 
                 <!-- Free Layouts -->
                 <div class="layout-cards" id="layoutCatFree">
-                    <div class="card" data-layout="2-strip" onclick="selectLayout('2-strip')">
+                    <div class="card" data-layout="2-strip" onclick="selectThemeLayout('2-strip')">
                         <div class="card-icon"><i class="ph ph-film-strip"></i></div>
                         <h3>Dải đôi</h3>
                         <p>2 ảnh kiểu film strip</p>
                     </div>
-                    <div class="card" data-layout="4-strip" onclick="selectLayout('4-strip')">
+                    <div class="card" data-layout="4-strip" onclick="selectThemeLayout('4-strip')">
                         <div class="card-icon"><i class="ph ph-film-strip"></i></div>
                         <h3>Dải tư</h3>
                         <p>4 ảnh dọc photobooth</p>
                     </div>
-                    <div class="card" data-layout="2x2-grid" onclick="selectLayout('2x2-grid')">
+                    <div class="card" data-layout="2x2-grid" onclick="selectThemeLayout('2x2-grid')">
                         <div class="card-icon"><i class="ph ph-squares-four"></i></div>
                         <h3>Lưới 2x2</h3>
                         <p>4 ảnh dạng polaroid</p>
+                    </div>
+                    <div class="card" data-layout="polaroid-basic" onclick="selectThemeLayout('polaroid-basic')">
+                        <div class="card-icon">📷</div>
+                        <h3>Polaroid Basic</h3>
+                        <p>1 ảnh tối giản phong cách cổ điển</p>
+                    </div>
+                    <div class="card" data-layout="minimal-white" onclick="selectThemeLayout('minimal-white')">
+                        <div class="card-icon">☁️</div>
+                        <h3>Minimal White</h3>
+                        <p>3 ảnh hàng dọc tinh tế</p>
                     </div>
                 </div>
 
                 <!-- Premium Layouts -->
                 <div class="layout-cards hidden" id="layoutCatPremium">
-                    <div class="card premium-card" data-layout="luxury-neon" onclick="selectPremiumLayout('luxury-neon')">
+                    <div class="card premium-card" data-layout="luxury-neon" onclick="selectThemeLayout('luxury-neon')">
                         <div class="badge premium">PREMIUM</div>
                         <div class="card-icon">💜</div>
                         <h3>Luxury Neon</h3>
                         <p>Neon tím hồng sang trọng</p>
                     </div>
-                    <div class="card premium-card" data-layout="pink-dream" onclick="selectPremiumLayout('pink-dream')">
+                    <div class="card premium-card" data-layout="pink-dream" onclick="selectThemeLayout('pink-dream')">
                         <div class="badge premium">PREMIUM</div>
                         <div class="card-icon">🌸</div>
                         <h3>Pink Dream</h3>
                         <p>Hồng pastel mơ màng</p>
                     </div>
-                    <div class="card premium-card" data-layout="kawaii-booth" onclick="selectPremiumLayout('kawaii-booth')">
+                    <div class="card premium-card" data-layout="magazine-cover" onclick="selectThemeLayout('magazine-cover')">
+                        <div class="badge premium">PREMIUM</div>
+                        <div class="card-icon">💄</div>
+                        <h3>Magazine Cover</h3>
+                        <p>Bìa tạp chí thời trang nổi bật</p>
+                    </div>
+                    <div class="card premium-card" data-layout="kawaii-booth" onclick="selectThemeLayout('kawaii-booth')">
                         <div class="badge premium">PREMIUM</div>
                         <div class="card-icon">🐰</div>
                         <h3>Kawaii Booth</h3>
                         <p>Phong cách dễ thương</p>
                     </div>
-                    <div class="card premium-card" data-layout="elegant-black" onclick="selectPremiumLayout('elegant-black')">
+                    <div class="card premium-card" data-layout="elegant-black" onclick="selectThemeLayout('elegant-black')">
                         <div class="badge premium">PREMIUM</div>
                         <div class="card-icon">🖤</div>
                         <h3>Elegant Black</h3>
                         <p>Đen sang trọng tối giản</p>
                     </div>
-                    <div class="card premium-card" data-layout="soft-pastel" onclick="selectPremiumLayout('soft-pastel')">
+                    <div class="card premium-card" data-layout="soft-pastel" onclick="selectThemeLayout('soft-pastel')">
                         <div class="badge premium">PREMIUM</div>
                         <div class="card-icon">🍬</div>
                         <h3>Soft Pastel</h3>
                         <p>Tone màu nhẹ nhàng</p>
                     </div>
-                    <div class="card premium-card" data-layout="couple-memories" onclick="selectPremiumLayout('couple-memories')">
+                    <div class="card premium-card" data-layout="couple-memories" onclick="selectThemeLayout('couple-memories')">
                         <div class="badge premium">PREMIUM</div>
                         <div class="card-icon">💑</div>
                         <h3>Couple Memories</h3>
                         <p>Kỷ niệm đôi lứa</p>
                     </div>
+                    <div class="card premium-card" data-layout="best-friends" onclick="selectThemeLayout('best-friends')">
+                        <div class="badge premium">PREMIUM</div>
+                        <div class="card-icon">👭</div>
+                        <h3>Best Friends</h3>
+                        <p>Mãi là tri kỷ dễ thương</p>
+                    </div>
                 </div>
 
                 <!-- Seasonal Layouts -->
                 <div class="layout-cards hidden" id="layoutCatSeasonal">
-                    <div class="card seasonal-card" data-layout="tet" onclick="selectPremiumLayout('tet')">
+                    <div class="card seasonal-card" data-layout="tet" onclick="selectThemeLayout('tet')">
                         <div class="badge seasonal">🧧 TẾT</div>
-                        <div class="card-icon">🌺</div>
+                        <div class="card-icon">🏮</div>
                         <h3>Tết Việt Nam</h3>
-                        <p>Hoa mai, lì xì, đỏ vàng</p>
+                        <p>Hoa mai, lì xì, đỏ vàng rực rỡ</p>
                     </div>
-                    <div class="card seasonal-card" data-layout="valentine" onclick="selectPremiumLayout('valentine')">
+                    <div class="card seasonal-card" data-layout="valentine" onclick="selectThemeLayout('valentine')">
                         <div class="badge seasonal">💕 LOVE</div>
                         <div class="card-icon">💝</div>
                         <h3>Valentine</h3>
-                        <p>Trái tim, tình yêu</p>
+                        <p>Trái tim và hoa hồng lãng mạn</p>
                     </div>
-                    <div class="card seasonal-card" data-layout="christmas" onclick="selectPremiumLayout('christmas')">
+                    <div class="card seasonal-card" data-layout="christmas" onclick="selectThemeLayout('christmas')">
                         <div class="badge seasonal">🎄 XMAS</div>
                         <div class="card-icon">🎅</div>
                         <h3>Giáng Sinh</h3>
-                        <p>Tuyết, cây thông, đỏ xanh</p>
+                        <p>Tuyết, thông xanh ấm cúng</p>
                     </div>
-                    <div class="card seasonal-card" data-layout="halloween" onclick="selectPremiumLayout('halloween')">
+                    <div class="card seasonal-card" data-layout="halloween" onclick="selectThemeLayout('halloween')">
                         <div class="badge seasonal">🎃 SPOOKY</div>
                         <div class="card-icon">👻</div>
                         <h3>Halloween</h3>
-                        <p>Bí ngô, cam tím</p>
+                        <p>Bí ngô, ma mị cam tím</p>
                     </div>
-                    <div class="card seasonal-card" data-layout="birthday" onclick="selectPremiumLayout('birthday')">
+                    <div class="card seasonal-card" data-layout="birthday" onclick="selectThemeLayout('birthday')">
                         <div class="badge seasonal">🎂 B-DAY</div>
                         <div class="card-icon">🎈</div>
                         <h3>Sinh nhật</h3>
-                        <p>Bong bóng, confetti</p>
+                        <p>Bong bóng, confetti tươi vui</p>
                     </div>
-                    <div class="card seasonal-card" data-layout="graduation" onclick="selectPremiumLayout('graduation')">
+                    <div class="card seasonal-card" data-layout="trung-thu" onclick="selectThemeLayout('trung-thu')">
+                        <div class="badge seasonal">🌕 MOON</div>
+                        <div class="card-icon">🌕</div>
+                        <h3>Trung thu</h3>
+                        <p>Đèn lồng thỏ ngọc lung linh</p>
+                    </div>
+                    <div class="card seasonal-card" data-layout="summer" onclick="selectThemeLayout('summer')">
+                        <div class="badge seasonal">🌊 SUN</div>
+                        <div class="card-icon">🌴</div>
+                        <h3>Summer</h3>
+                        <p>Nắng vàng biển xanh rực rỡ</p>
+                    </div>
+                    <div class="card seasonal-card" data-layout="graduation" onclick="selectThemeLayout('graduation')">
                         <div class="badge seasonal">🎓 GRAD</div>
                         <div class="card-icon">🎓</div>
                         <h3>Graduation</h3>
-                        <p>Tốt nghiệp, vàng đen</p>
+                        <p>Kỷ niệm tốt nghiệp vàng đen</p>
                     </div>
                 </div>
 
@@ -159,21 +193,21 @@
         <!-- Support/Donation Modal -->
         <div id="supportModal" class="modal hidden">
             <div class="modal-content text-center">
-                <button class="close-modal" onclick="closeSupportModal()"><i class="ph ph-x"></i></button>
-                <h3 style="color: var(--active-color);">✨ Ủng hộ để mở khóa Premium ✨</h3>
-                <p class="mt-2" style="font-size: 0.95rem; line-height: 1.5;">
-                    Quét mã QR để ủng hộ nhà phát triển và mở khóa các khung hình độc quyền Premium + Seasonal! 💖
+                <button class="close-modal" onclick="closeDonateModal()"><i class="ph ph-x"></i></button>
+                <h3 style="color: var(--active-color);">Ủng hộ để mở khóa khung Premium ✨</h3>
+                <p class="mt-2" style="font-size: 0.95rem; line-height: 1.5; color: var(--text-sub);">
+                    Bạn có thể quét mã QR để ủng hộ nhà phát triển và mở khóa các khung hình độc quyền.
                 </p>
                 
                 <div class="qr-container mt-3">
-                    <img src="https://img.vietqr.io/image/MB-0332941152-compact2.png?addInfo=UNG%20HO%20TE%20PHOTOBOOTH&accountName=CAO%20BA%20THIEN" alt="QR Code" id="paymentQR">
+                    <img src="images/mbbank-qr.png" alt="MBBank QR" id="paymentQR">
                 </div>
                 
-                <p class="mt-2 text-sub" style="font-size: 0.85rem;">STK: <strong>0332941152</strong> - MBBank<br>Tên tài khoản: <strong>CAO BA THIEN</strong></p>
+                <p class="mt-2 text-sub" style="font-size: 0.85rem; color: #fff;">Tên tài khoản: <strong>Cao Ba Thien</strong><br>Ngân hàng: <strong>MBBank</strong><br>STK: <strong>0332941152</strong></p>
                 
                 <div class="flex-col gap-2 mt-3" style="display: flex; flex-direction: column; gap: 10px;">
-                    <button class="btn-primary" onclick="unlockPremium()">Tôi đã ủng hộ 💖</button>
-                    <button class="btn-secondary" onclick="closeSupportModal()" style="justify-content: center;">Đóng</button>
+                    <button id="btnConfirmDonated" class="btn-primary" onclick="unlockPremium()">Tôi đã ủng hộ 💖</button>
+                    <button class="btn-secondary" onclick="closeDonateModal()" style="justify-content: center;">Đóng</button>
                 </div>
             </div>
         </div>
@@ -228,13 +262,16 @@
                 </div>
             </div>
 
+            <!-- Cancel Countdown Floating Overlay -->
+            <button id="btnCancelCountdown" class="btn-secondary hidden" onclick="cancelCountdown()" style="position:absolute; top:20px; right:20px; z-index:20; background:rgba(255,77,77,0.3); border-color:var(--danger); color:white;"><i class="ph ph-x-circle"></i> Hủy đếm ngược</button>
+
             <div class="camera-bottom">
                 
                 <!-- Filter & Reshape & Background Tabs -->
                 <div class="filter-tabs">
-                    <button class="tab-btn active" onclick="switchCameraTab('filters', this)">Bộ lọc</button>
-                    <button class="tab-btn" onclick="switchCameraTab('reshape', this)">Sửa mặt</button>
-                    <button class="tab-btn" onclick="switchCameraTab('background', this)">Nền ảo</button>
+                    <button id="btnCameraTabFilters" class="tab-btn active" onclick="switchCameraTab('filters', this)">Bộ lọc</button>
+                    <button id="btnCameraTabReshape" class="tab-btn" onclick="switchCameraTab('reshape', this)">Sửa mặt</button>
+                    <button id="btnCameraTabBackground" class="tab-btn" onclick="switchCameraTab('background', this)">Nền ảo</button>
                 </div>
 
                 <!-- Filter Selection Bar -->
@@ -263,33 +300,54 @@
                             <span>Tắt</span>
                         </div>
                         <div class="filter-preview-box" onclick="setVirtualBackground('blur')">
-                            <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1557683316-973673baf926?w=100'); background-size:cover;"></div>
+                            <div class="preview-img" style="background:linear-gradient(135deg, #555, #222); display:flex; align-items:center; justify-content:center; font-size:12px;">🌫️</div>
                             <span>Làm mờ</span>
                         </div>
-                        <div class="filter-preview-box" onclick="setVirtualBackground('color1')">
-                            <div class="preview-img" style="background:linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);"></div>
-                            <span>Hồng nhạt</span>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('studio-pink')">
+                            <div class="preview-img" style="background:linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);"></div>
+                            <span>Studio Pink</span>
                         </div>
-                        <div class="filter-preview-box" onclick="setVirtualBackground('color2')">
-                            <div class="preview-img" style="background:linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);"></div>
-                            <span>Xanh nhạt</span>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('neon-purple')">
+                            <div class="preview-img" style="background:linear-gradient(135deg, #1a0030 0%, #8f00ff 100%);"></div>
+                            <span>Neon Purple</span>
                         </div>
-                        <div class="filter-preview-box" onclick="setVirtualBackground('color3')">
-                            <div class="preview-img" style="background:linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);"></div>
-                            <span>Bạc</span>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('sky-blue')">
+                            <div class="preview-img" style="background:linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);"></div>
+                            <span>Sky Blue</span>
                         </div>
-                        <div class="filter-preview-box" onclick="setVirtualBackground('color4')">
-                            <div class="preview-img" style="background:linear-gradient(to right, #4facfe 0%, #00f2fe 100%);"></div>
-                            <span>Neon xanh</span>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('flower')">
+                            <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=80&q=50'); background-size:cover;"></div>
+                            <span>Flower</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('christmas')">
+                            <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1544816155-12df9643f363?w=80&q=50'); background-size:cover;"></div>
+                            <span>Christmas</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('tet-red')">
+                            <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=80&q=50'); background-size:cover;"></div>
+                            <span>Tết Đỏ</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('gradient-dream')">
+                            <div class="preview-img" style="background:linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #a1c4fd 100%);"></div>
+                            <span>Dreamy</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="setVirtualBackground('cafe')">
+                            <div class="preview-img" style="background:url('https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=80&q=50'); background-size:cover;"></div>
+                            <span>Cafe</span>
+                        </div>
+                        <div class="filter-preview-box" onclick="triggerCustomBgUpload()">
+                            <div class="preview-img" style="background:#444; display:flex; align-items:center; justify-content:center; font-size:18px; border:1px dashed #aaa;">➕</div>
+                            <span>Tự tải</span>
                         </div>
                     </div>
+                    <input type="file" id="customBgInput" accept="image/*" style="display:none;" onchange="handleCustomBgUpload(event)">
                 </div>
 
                 <!-- Toggles -->
                 <div class="camera-toggles">
                     <div class="timer-pills">
                         <i class="ph ph-timer"></i>
-                        <button class="timer-pill" onclick="setTimer(0)" id="btnTimer0">0s</button>
+                        <button class="timer-pill" onclick="setTimer(0)" id="btnTimer0">Off</button>
                         <button class="timer-pill active" onclick="setTimer(3)" id="btnTimer3">3s</button>
                         <button class="timer-pill" onclick="setTimer(5)" id="btnTimer5">5s</button>
                         <button class="timer-pill" onclick="setTimer(10)" id="btnTimer10">10s</button>
@@ -366,15 +424,15 @@
                 <!-- Toolbar Area -->
                 <div class="toolbar-area">
                     <div class="toolbar-tabs">
-                        <button class="tab-btn active" onclick="switchTab('colors')"><i class="ph ph-palette"></i> Màu sắc</button>
-                        <button class="tab-btn" onclick="switchTab('filters')"><i class="ph ph-magic-wand"></i> Bộ lọc</button>
-                        <button class="tab-btn" onclick="switchTab('stickers')"><i class="ph ph-sticker"></i> Sticker</button>
-                        <button class="tab-btn" onclick="switchTab('text')"><i class="ph ph-text-t"></i> Chữ</button>
-                        <button class="tab-btn" onclick="switchTab('effects')"><i class="ph ph-sparkle"></i> Hiệu ứng</button>
-                        <button class="tab-btn" onclick="switchTab('adjust')"><i class="ph ph-sliders"></i> Tinh chỉnh</button>
+                        <button id="btnTabFrame" class="tab-btn active" onclick="switchTab('frame')"><i class="ph ph-palette"></i> Khung hình</button>
+                        <button id="btnTabFilters" class="tab-btn" onclick="switchTab('filters')"><i class="ph ph-magic-wand"></i> Bộ lọc</button>
+                        <button id="btnTabStickers" class="tab-btn" onclick="switchTab('stickers')"><i class="ph ph-sticker"></i> Sticker</button>
+                        <button id="btnTabText" class="tab-btn" onclick="switchTab('text')"><i class="ph ph-text-t"></i> Chữ</button>
+                        <button id="btnTabExport" class="tab-btn" onclick="switchTab('export')"><i class="ph ph-export"></i> Xuất ảnh</button>
                     </div>
 
-                    <div class="tab-content" id="tab-colors" style="display: block;">
+                    <!-- FRAME TAB: Background colors & Overlays -->
+                    <div class="tab-content" id="tab-frame" style="display: block;">
                         <h4>Màu khung nền</h4>
                         <div class="color-picker-grid">
                             <div class="color-btn" style="background: #ffffff; border: 1px solid #ccc" onclick="setFrameBg('#ffffff')"></div>
@@ -386,8 +444,30 @@
                             <div class="color-btn gradient-1" onclick="setFrameBg('linear-gradient(135deg, #b56cff, #ff5fb7)')"></div>
                             <div class="color-btn gradient-2" onclick="setFrameBg('linear-gradient(135deg, #4facfe, #00f2fe)')"></div>
                         </div>
+
+                        <h4 style="margin-top: 2rem;">Hiệu ứng trang trí</h4>
+                        <div class="effect-grid">
+                            <button class="effect-btn active" onclick="setOverlay('none')">Không có</button>
+                            <button class="effect-btn" onclick="setOverlay('sparkle')">Lấp lánh ✨</button>
+                            <button class="effect-btn" onclick="setOverlay('grain')">Hạt Film 🎞️</button>
+                            <button class="effect-btn" onclick="setOverlay('hearts')">Trái tim ❤️</button>
+                            <button class="effect-btn" onclick="setOverlay('stars')">Sao nhỏ ⭐</button>
+                            <button class="effect-btn" onclick="setOverlay('bubbles')">Bong bóng 🫧</button>
+                            <button class="effect-btn" onclick="setOverlay('flowers')">Hoa cúc 🌸</button>
+                            <button class="effect-btn" onclick="setOverlay('butterflies')">Bươm bướm 🦋</button>
+                            <button class="effect-btn" onclick="setOverlay('music')">Nốt nhạc 🎵</button>
+                        </div>
+
+                        <div class="toggle-group mt-3">
+                            <label>In ngày tháng (Date stamp)</label>
+                            <label class="switch">
+                                <input type="checkbox" id="dateStampToggle" onchange="toggleDateStamp()">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
                     </div>
 
+                    <!-- FILTERS TAB: Photo filters & Fine adjustments -->
                     <div class="tab-content" id="tab-filters">
                         <h4>Bộ lọc ảnh</h4>
                         <div class="filter-grid">
@@ -403,21 +483,42 @@
                             <button class="filter-btn" onclick="applyFilter('contrast')">Contrast</button>
                             <button class="filter-btn" onclick="applyFilter('dreamy')">Dreamy</button>
                         </div>
+
+                        <h4 style="margin-top: 2rem;">Điều chỉnh ảnh</h4>
+                        <div class="slider-group">
+                            <label>Độ sáng (Brightness)</label>
+                            <input type="range" min="50" max="150" value="100" id="adj-brightness" oninput="updateAdjustments()">
+                        </div>
+                        <div class="slider-group">
+                            <label>Độ tương phản (Contrast)</label>
+                            <input type="range" min="50" max="150" value="100" id="adj-contrast" oninput="updateAdjustments()">
+                        </div>
+                        <div class="slider-group">
+                            <label>Độ bão hòa (Saturation)</label>
+                            <input type="range" min="0" max="200" value="100" id="adj-saturation" oninput="updateAdjustments()">
+                        </div>
+                        <div class="slider-group">
+                            <label>Độ mờ (Blur)</label>
+                            <input type="range" min="0" max="10" value="0" id="adj-blur" oninput="updateAdjustments()">
+                        </div>
                     </div>
 
+                    <!-- STICKERS TAB: Emojis -->
                     <div class="tab-content" id="tab-stickers">
                         <h4>Thêm Sticker</h4>
-                        <p class="hint-text">Bấm vào sticker để thêm vào ảnh. Bạn có thể kéo thả để di chuyển.</p>
+                        <p class="hint-text">Bấm vào sticker để thêm vào ảnh. Bạn có thể kéo thả để di chuyển, dùng handle ở góc để phóng to/thu nhỏ.</p>
                         <div class="sticker-grid" id="stickerList">
                             <!-- JS will generate stickers -->
                         </div>
                     </div>
 
+                    <!-- TEXT TAB: Full Advanced Text Editor -->
                     <div class="tab-content" id="tab-text">
-                        <h4>Thêm chữ</h4>
+                        <h4>Text Editor Chuyên Nghiệp</h4>
                         <div class="text-input-group">
-                            <input type="text" id="textInput" placeholder="Nhập nội dung bạn muốn...">
-                            <select id="fontSelect">
+                            <input type="text" id="textInput" placeholder="Nhập nội dung bạn muốn..." oninput="handleTextInputChange(this.value)">
+                            
+                            <select id="fontSelect" onchange="updateSelectedTextProperty('font', this.value)">
                                 <option value="Syne">Syne</option>
                                 <option value="DM Sans">DM Sans</option>
                                 <option value="Space Grotesk">Space Grotesk</option>
@@ -425,17 +526,14 @@
                                 <option value="Pacifico">Pacifico</option>
                                 <option value="Bebas Neue">Bebas Neue</option>
                                 <option value="Abril Fatface">Abril Fatface</option>
-                                <option value="Montserrat">Montserrat</option>
-                                <option value="Dancing Script">Dancing Script</option>
-                                <option value="Caveat">Caveat</option>
-                                <option value="Permanent Marker">Permanent Marker</option>
+                                <option value="Arial">Arial</option>
                             </select>
                             
                             <div class="text-controls-row">
-                                <input type="color" id="textColor" value="#ff3366" title="Màu chữ">
+                                <input type="color" id="textColor" value="#ff3366" title="Màu chữ" oninput="updateSelectedTextProperty('color', this.value)">
                                 <div class="quick-colors">
-                                    <span class="qc" style="background:#fff" onclick="setTextColor('#ffffff')"></span>
-                                    <span class="qc" style="background:#000" onclick="setTextColor('#000000')"></span>
+                                    <span class="qc" style="background:#ffffff" onclick="setTextColor('#ffffff')"></span>
+                                    <span class="qc" style="background:#000000" onclick="setTextColor('#000000')"></span>
                                     <span class="qc" style="background:#ff5fb7" onclick="setTextColor('#ff5fb7')"></span>
                                     <span class="qc" style="background:#b56cff" onclick="setTextColor('#b56cff')"></span>
                                     <span class="qc" style="background:#ffd700" onclick="setTextColor('#ffd700')"></span>
@@ -444,13 +542,20 @@
                             </div>
                             
                             <div class="slider-group compact">
-                                <label>Cỡ chữ: <span id="fontSizeVal">30</span>px</label>
-                                <input type="range" min="10" max="120" value="30" id="textSize" oninput="document.getElementById('fontSizeVal').textContent=this.value; updateSelectedTextProperty('fontSize', parseInt(this.value))">
+                                <label>Cỡ chữ: <span id="fontSizeVal">36</span>px</label>
+                                <input type="range" min="10" max="120" value="36" id="textSize" oninput="document.getElementById('fontSizeVal').textContent=this.value; updateSelectedTextProperty('fontSize', parseInt(this.value))">
                             </div>
                             
-                            <div class="text-style-toggles">
-                                <button class="style-toggle" id="toggleBold" onclick="toggleTextBold()" title="Đậm"><b>B</b></button>
-                                <button class="style-toggle" id="toggleItalic" onclick="toggleTextItalic()" title="Nghiêng"><i>I</i></button>
+                            <div class="text-style-toggles" style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; gap:8px;">
+                                    <button class="style-toggle" id="toggleBold" onclick="toggleTextBold()" title="Đậm"><b>B</b></button>
+                                    <button class="style-toggle" id="toggleItalic" onclick="toggleTextItalic()" title="Nghiêng"><i>I</i></button>
+                                </div>
+                                <div class="align-pills" style="display:flex; gap:4px; background:rgba(255,255,255,0.05); padding:4px; border-radius:8px;">
+                                    <button class="align-pill active" id="btnAlignLeft" onclick="setTextAlign('left')" title="Căn trái" style="background:transparent; color:#8f88b8; padding:4px 8px; border-radius:4px;"><i class="ph ph-text-align-left"></i></button>
+                                    <button class="align-pill" id="btnAlignCenter" onclick="setTextAlign('center')" title="Căn giữa" style="background:transparent; color:#8f88b8; padding:4px 8px; border-radius:4px;"><i class="ph ph-text-align-center"></i></button>
+                                    <button class="align-pill" id="btnAlignRight" onclick="setTextAlign('right')" title="Căn phải" style="background:transparent; color:#8f88b8; padding:4px 8px; border-radius:4px;"><i class="ph ph-text-align-right"></i></button>
+                                </div>
                             </div>
                             
                             <div class="slider-group compact">
@@ -475,10 +580,10 @@
                                 <input type="range" min="-180" max="180" value="0" id="textRotation" oninput="document.getElementById('rotationVal').textContent=this.value; updateSelectedTextProperty('rotation', parseInt(this.value))">
                             </div>
                             
-                            <button class="btn-secondary full-width" onclick="addText()"><i class="ph ph-plus"></i> Thêm chữ</button>
+                            <button id="btnAddCustomText" class="btn-secondary full-width" onclick="addCustomText()" style="background:var(--btn-gradient); border:none;"><i class="ph ph-plus"></i> Thêm chữ</button>
                         </div>
                         
-                        <h4 style="margin-top:1rem;">Chữ gợi ý</h4>
+                        <h4 style="margin-top:2rem;">Chữ gợi ý phong cách ✨</h4>
                         <div class="suggestions">
                             <span onclick="quickAddText('Best Day Ever')">Best Day Ever</span>
                             <span onclick="quickAddText('Lovely Moments')">Lovely Moments</span>
@@ -492,60 +597,38 @@
                             <span onclick="quickAddText('2026 Memories')">2026 Memories</span>
                         </div>
                         
-                        <div class="element-controls hidden" id="elementControls">
-                            <button class="btn-icon danger" onclick="deleteSelectedElement()"><i class="ph ph-trash"></i> Xóa phần tử đang chọn</button>
+                        <div class="element-controls hidden" id="elementControls" style="margin-top: 1.5rem;">
+                            <button id="btnDeleteSelected" class="btn-icon danger" onclick="deleteSelectedElement()" style="width:100%; border:1px solid rgba(255,77,77,0.3); background:rgba(255,77,77,0.1); padding:10px; border-radius:10px; color:#ff4d4d; font-weight:600;"><i class="ph ph-trash"></i> Xóa chữ đang chọn</button>
                         </div>
                     </div>
 
-                    <div class="tab-content" id="tab-effects">
-                        <h4>Hiệu ứng trang trí</h4>
-                        <div class="effect-grid">
-                            <button class="effect-btn active" onclick="setOverlay('none')">Không có</button>
-                            <button class="effect-btn" onclick="setOverlay('sparkle')">Lấp lánh</button>
-                            <button class="effect-btn" onclick="setOverlay('grain')">Hạt Film</button>
-                            <button class="effect-btn" onclick="setOverlay('hearts')">Trái tim</button>
-                            <button class="effect-btn" onclick="setOverlay('stars')">Sao nhỏ</button>
-                            <button class="effect-btn" onclick="setOverlay('bubbles')">Bong bóng</button>
-                            <button class="effect-btn" onclick="setOverlay('flowers')">Hoa cúc</button>
-                            <button class="effect-btn" onclick="setOverlay('butterflies')">Bươm bướm</button>
-                            <button class="effect-btn" onclick="setOverlay('music')">Nốt nhạc</button>
+                    <!-- EXPORT TAB: GIF, Boomerang, PNG saving -->
+                    <div class="tab-content" id="tab-export">
+                        <h4>Tạo ảnh động vui nhộn</h4>
+                        
+                        <div class="gif-settings" style="background: rgba(255,255,255,0.03); border:1px solid var(--card-border); padding: 1.2rem; border-radius:15px; margin-bottom: 1.5rem;">
+                            <p class="hint-text" style="margin-bottom:10px;">Ghép các bức ảnh đã chụp thành ảnh GIF hoặc hiệu ứng Boomerang chuyển đổi liên tục.</p>
+                            
+                            <div class="slider-group compact" style="margin-bottom:15px;">
+                                <label style="font-size:0.85rem; color:var(--text-sub); margin-bottom: 5px;">Tốc độ hiển thị: <span id="gifSpeedLabel">400ms</span></label>
+                                <div class="speed-pills" style="display:flex; gap:6px; width:100%;">
+                                    <button class="speed-pill" onclick="setGifDelay(200, this)" style="flex:1; padding:6px; border-radius:8px; font-size:0.8rem; background:rgba(255,255,255,0.05); color:var(--text-sub); border:1px solid var(--card-border);">200ms</button>
+                                    <button class="speed-pill active" onclick="setGifDelay(400, this)" style="flex:1; padding:6px; border-radius:8px; font-size:0.8rem; background:var(--btn-gradient); color:white; border:none; box-shadow:0 0 10px rgba(181, 108, 255, 0.4);">400ms</button>
+                                    <button class="speed-pill" onclick="setGifDelay(600, this)" style="flex:1; padding:6px; border-radius:8px; font-size:0.8rem; background:rgba(255,255,255,0.05); color:var(--text-sub); border:1px solid var(--card-border);">600ms</button>
+                                </div>
+                            </div>
+                            
+                            <div class="export-row" style="display:flex; gap:10px; margin-top:10px;">
+                                <button class="btn-secondary" onclick="createGif()" style="flex:1; padding:10px 5px;"><i class="ph ph-gif"></i> Tạo GIF</button>
+                                <button class="btn-secondary" onclick="createBoomerang()" style="flex:1; padding:10px 5px;"><i class="ph ph-repeat"></i> Boomerang</button>
+                            </div>
                         </div>
-                        <div class="toggle-group mt-3">
-                            <label>In ngày tháng (Date stamp)</label>
-                            <label class="switch">
-                                <input type="checkbox" id="dateStampToggle" onchange="toggleDateStamp()">
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                    </div>
 
-                    <div class="tab-content" id="tab-adjust">
-                        <h4>Điều chỉnh ảnh</h4>
-                        <div class="slider-group">
-                            <label>Độ sáng (Brightness)</label>
-                            <input type="range" min="50" max="150" value="100" id="adj-brightness" oninput="updateAdjustments()">
-                        </div>
-                        <div class="slider-group">
-                            <label>Độ tương phản (Contrast)</label>
-                            <input type="range" min="50" max="150" value="100" id="adj-contrast" oninput="updateAdjustments()">
-                        </div>
-                        <div class="slider-group">
-                            <label>Độ bão hòa (Saturation)</label>
-                            <input type="range" min="0" max="200" value="100" id="adj-saturation" oninput="updateAdjustments()">
-                        </div>
-                        <div class="slider-group">
-                            <label>Độ mờ (Blur)</label>
-                            <input type="range" min="0" max="10" value="0" id="adj-blur" oninput="updateAdjustments()">
-                        </div>
-                    </div>
-
-                    <div class="download-section">
-                        <button class="btn-primary full-width" onclick="downloadImage()"><i class="ph ph-download-simple"></i> LƯU ẢNH VỀ MÁY</button>
-                        <div class="export-row">
-                            <button class="btn-secondary" onclick="shareFinalImage()"><i class="ph ph-share-network"></i> Chia sẻ</button>
-                            <button class="btn-secondary" onclick="openQRModal()"><i class="ph ph-qr-code"></i> QR</button>
-                            <button class="btn-secondary" onclick="createGif()"><i class="ph ph-gif"></i> GIF</button>
-                            <button class="btn-secondary" onclick="createBoomerang()"><i class="ph ph-repeat"></i> Boomerang</button>
+                        <h4>Lưu & Chia sẻ tác phẩm</h4>
+                        <div class="flex-col gap-2" style="display:flex; flex-direction:column; gap:10px; margin-top:0.8rem;">
+                            <button id="btnDownloadPng" class="btn-primary full-width" onclick="downloadImage()" style="padding: 14px;"><i class="ph ph-download-simple"></i> LƯU ẢNH PNG VỀ MÁY</button>
+                            <button id="btnShareImg" class="btn-secondary full-width" onclick="shareFinalImage()" style="padding: 12px; justify-content:center;"><i class="ph ph-share-network"></i> CHIA SẺ TRỰC TIẾP</button>
+                            <button id="btnCreateQr" class="btn-secondary full-width" onclick="openQRModal()" style="padding: 12px; justify-content:center;"><i class="ph ph-qr-code"></i> TẠO MÃ QR TẢI ẢNH</button>
                         </div>
                     </div>
                 </div>
@@ -554,15 +637,23 @@
         
         <!-- QR Modal -->
         <div id="qrModal" class="modal hidden">
-            <div class="modal-content text-center">
+            <div class="modal-content text-center" style="background: #151526;">
                 <button class="close-modal" onclick="closeQRModal()"><i class="ph ph-x"></i></button>
                 <h3 style="color: var(--active-color);">Quét QR để tải ảnh</h3>
-                <p class="mt-2" style="font-size:0.9rem; color:var(--text-sub);">Dùng điện thoại quét mã QR để mở ảnh photobooth của bạn.</p>
-                <div class="qr-container mt-3">
-                    <canvas id="qrCanvas"></canvas>
+                <p class="mt-2" style="font-size:0.9rem; color:var(--text-sub);">Dùng điện thoại quét mã QR để mở và tải ảnh photobooth của bạn.</p>
+                
+                <div class="qr-container-wrapper mt-3" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                    <div id="qrLoading" class="hidden" style="margin:20px; color:#fff;">
+                        <i class="ph ph-spinner-gap spin" style="font-size: 2rem;"></i>
+                        <p style="margin-top: 10px; font-size:0.85rem;">Đang tải ảnh lên server...</p>
+                    </div>
+                    <div class="qr-container" id="qrContainer">
+                        <canvas id="qrCanvas"></canvas>
+                    </div>
                 </div>
+                
                 <div class="flex-col gap-2 mt-3" style="display:flex; flex-direction:column; gap:10px;">
-                    <button class="btn-primary" onclick="downloadImage()"><i class="ph ph-download-simple"></i> Tải ảnh</button>
+                    <button class="btn-primary" onclick="downloadImage()"><i class="ph ph-download-simple"></i> Tải ảnh trực tiếp</button>
                     <button class="btn-secondary" onclick="closeQRModal()" style="justify-content:center;">Đóng</button>
                 </div>
             </div>
@@ -570,7 +661,7 @@
 
         <!-- GIF Loading Modal -->
         <div id="gifModal" class="modal hidden">
-            <div class="modal-content text-center">
+            <div class="modal-content text-center" style="background: #151526;">
                 <h3 style="color: var(--active-color);"><i class="ph ph-spinner-gap spin"></i> Đang tạo...</h3>
                 <p class="mt-2" id="gifStatus" style="color:var(--text-sub);">Đang xử lý các frame ảnh...</p>
             </div>

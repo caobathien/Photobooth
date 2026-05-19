@@ -1562,3 +1562,86 @@ input:checked + .slider:before { transform: translateX(26px); }
     .card p { font-size: 0.8rem; }
     .card-icon { font-size: 2.5rem; }
 }
+
+/* ================= ADDED PREMIUM STYLES ================= */
+.speed-pills {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+}
+.speed-pill {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-sub);
+    border: 1px solid var(--card-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+.speed-pill:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+.speed-pill.active {
+    background: var(--btn-gradient);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(181, 108, 255, 0.4);
+}
+
+.align-pill {
+    background: transparent;
+    border: none;
+    color: var(--text-sub);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.align-pill:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.08);
+}
+.align-pill.active {
+    color: var(--active-color);
+    background: rgba(181, 108, 255, 0.12);
+}
+
+/* Enhanced Drag and Drop elements visual highlight */
+.draggable-element {
+    transition: box-shadow 0.2s, background 0.2s;
+}
+.draggable-element.selected {
+    border: 2px dashed var(--active-color);
+    background: rgba(181, 108, 255, 0.06);
+    box-shadow: 0 0 15px rgba(181, 108, 255, 0.3);
+    padding: 6px;
+    margin: -8px;
+    border-radius: 8px;
+}
+
+/* Make sure mobile bottom tabs are scrollable and styled well */
+@media (max-width: 600px) {
+    .toolbar-tabs {
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+    .toolbar-tabs::-webkit-scrollbar {
+        display: none;
+    }
+    .toolbar-tabs .tab-btn {
+        flex: 1 0 auto;
+        padding: 0.8rem 1.2rem;
+    }
+}

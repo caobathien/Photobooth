@@ -1,5 +1,5 @@
 // ================= STATE VARIABLES =================
-let selectedLayout = null; // '2-strip', '4-strip', '2x2-grid' or themed layouts
+let selectedLayout = null; // '2-strip', '4-strip', '2x2-grid', '3-strip', 'polaroid', 'magazine'
 let selectedTheme = null; // themed layout config object
 let maxImages = 0;
 let capturedImages = []; // Stores all 6 captured data URLs
@@ -77,6 +77,7 @@ let currentFilter = 'none';
 let currentOverlay = 'none';
 let showDateStamp = false;
 let adjustments = { brightness: 100, contrast: 100, saturation: 100, blur: 0 };
+let gifDelay = 400; // Delay of GIF/Boomerang in ms
 
 // Draggable Elements (Stickers & Text)
 let draggableElements = [];
@@ -84,7 +85,7 @@ let selectedElementIndex = -1;
 let dragStartX = 0, dragStartY = 0;
 let isDragging = false;
 
-const stickersList = ['❤️','✨','🌸','🐰','🐱','⭐','💖','🎀','😍','🔥','🦋','🌈'];
+const stickersList = ['❤️','✨','🌸','🐰','🐱','⭐','💖','🎀','😍','🔥','🦋','🌈','☀️','🎈','🍬','🐶','👻','🎉','🍀','🍰'];
 
 // DOM Elements
 const screens = {
@@ -96,6 +97,7 @@ const screens = {
 
 // Support State
 let hasSeenSupportPopup = false;
+let pendingThemeId = null;
 
 const cameraVideo = document.getElementById('cameraVideo');
 const countdownEl = document.getElementById('countdown');
@@ -106,11 +108,21 @@ const interactiveLayer = document.getElementById('interactiveLayer');
 const thumbnailsContainer = document.getElementById('shotThumbnails');
 const btnEnterRoom = document.getElementById('btnEnterRoom');
 const btnCapture = document.getElementById('btnCapture');
-const shotCounter = document.querySelector('.shot-counter');
+let shotCounter = document.querySelector('.shot-counter');
 const toastEl = document.getElementById('toast');
 
 const beepAudio = document.getElementById('beepAudio');
 const shutterAudio = document.getElementById('shutterAudio');
+
+// Virtual Backgrounds Preloading
+const VBG_IMAGES = {
+    'flower': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&q=80',
+    'cafe': 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80',
+    'christmas': 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80',
+    'tet-red': 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=800&q=80'
+};
+const loadedVbgImages = {};
+let customBackgroundImage = null;
 
 // ================= INIT =================
 function init() {
@@ -118,6 +130,7 @@ function init() {
     setupInteractiveLayer();
     renderLiveFilters();
     initFaceDetection();
+    preloadVirtualBackgrounds();
     
     // Prevent zoom on mobile double tap
     document.addEventListener('dblclick', function(event) {
@@ -125,6 +138,17 @@ function init() {
     }, { passive: false });
 
     initPinchToZoom();
+}
+
+function preloadVirtualBackgrounds() {
+    Object.entries(VBG_IMAGES).forEach(([key, url]) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            loadedVbgImages[key] = img;
+        };
+        img.src = url;
+    });
 }
 
 // ================= PINCH TO ZOOM GESTURE =================
@@ -151,7 +175,7 @@ function initPinchToZoom() {
 
     selfieFrame.addEventListener('touchmove', (e) => {
         if (e.touches.length === 2 && initialPinchDistance) {
-            e.preventDefault(); // Ngăn trình duyệt cuộn trang
+            e.preventDefault(); // Prevent scrolling page
             const currentDistance = getPinchDistance(e);
             const scale = currentDistance / initialPinchDistance;
             let newZoom = initialZoom * scale;
@@ -159,7 +183,6 @@ function initPinchToZoom() {
             if (newZoom < 0.5) newZoom = 0.5;
             if (newZoom > 3) newZoom = 3;
             
-            // Limit decimal places to make slider sync smooth
             newZoom = Math.round(newZoom * 10) / 10;
             updateZoom(newZoom);
         }
@@ -173,20 +196,26 @@ function initPinchToZoom() {
 }
 
 // ================= LAYOUT SCREEN =================
-// Themed layout configurations
 const THEMED_LAYOUTS = {
-    'luxury-neon': { name: 'Luxury Neon', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #1a0030, #2d0050)', borderColor: '#b56cff', decos: ['✨','💜','⭐'], textDefault: 'Luxury Neon' },
-    'pink-dream': { name: 'Pink Dream', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #ffe0f0, #ffc0e0)', borderColor: '#ff69b4', decos: ['🌸','💕','🎀'], textDefault: 'Pink Dream' },
-    'kawaii-booth': { name: 'Kawaii Booth', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #fff0f5, #ffe4f0)', borderColor: '#ffb6c1', decos: ['🐰','🌟','🍭','🎀'], textDefault: 'Kawaii ♡' },
-    'elegant-black': { name: 'Elegant Black', type: 'premium', photoCount: 2, baseLayout: '2-strip', bg: '#0a0a0a', borderColor: '#d4af37', decos: ['⭐'], textDefault: 'Elegant' },
-    'soft-pastel': { name: 'Soft Pastel', type: 'premium', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #e8daef, #d5f5e3, #fdebd0)', borderColor: '#c39bd3', decos: ['🌈','🦋','☁️'], textDefault: 'Soft Pastel' },
-    'couple-memories': { name: 'Couple Memories', type: 'premium', photoCount: 2, baseLayout: '2-strip', bg: 'linear-gradient(135deg, #fce4ec, #f8bbd0)', borderColor: '#e91e63', decos: ['❤️','💑','💕'], textDefault: 'Our Memories' },
-    'tet': { name: 'Tết Việt Nam', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #c62828, #ff8f00)', borderColor: '#ffd700', decos: ['🌺','🧧','🎊','🏮'], textDefault: 'Chúc Mừng Năm Mới' },
-    'valentine': { name: 'Valentine', type: 'seasonal', photoCount: 2, baseLayout: '2-strip', bg: 'linear-gradient(135deg, #e91e63, #f48fb1)', borderColor: '#ff1744', decos: ['❤️','💕','💘','🌹'], textDefault: 'Happy Valentine' },
-    'christmas': { name: 'Giáng Sinh', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #1b5e20, #b71c1c)', borderColor: '#fff', decos: ['🎄','⭐','❄️','🎁'], textDefault: 'Merry Christmas' },
-    'halloween': { name: 'Halloween', type: 'seasonal', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #1a0a2e, #ff6f00)', borderColor: '#ff9800', decos: ['🎃','👻','🦇','🕷️'], textDefault: 'Happy Halloween' },
-    'birthday': { name: 'Sinh nhật', type: 'seasonal', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #e1bee7, #bbdefb, #fff9c4)', borderColor: '#ff4081', decos: ['🎈','🎂','🎉','🎊'], textDefault: 'Happy Birthday!' },
-    'graduation': { name: 'Graduation', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #1a1a2e, #d4af37)', borderColor: '#d4af37', decos: ['🎓','⭐','🏆'], textDefault: 'Congratulations!' }
+    // Premium layouts
+    'luxury-neon': { name: 'Luxury Neon', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #150d22, #07030c)', borderColor: '#b56cff', decos: ['✨','💜','⭐','💖'], textDefault: 'Luxury Neon' },
+    'pink-dream': { name: 'Pink Dream', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #ffe0f0, #ffc0e0)', borderColor: '#ff69b4', decos: ['🌸','💕','🎀','🧸'], textDefault: 'Pink Dream' },
+    'magazine-cover': { name: 'Magazine Cover', type: 'premium', photoCount: 1, baseLayout: 'magazine', bg: '#111111', borderColor: '#ffffff', decos: ['💄','💎','🔥','✨'], textDefault: 'PHOTOBOOTH' },
+    'kawaii-booth': { name: 'Kawaii Booth', type: 'premium', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #fff0f5, #ffe4f0)', borderColor: '#ffb6c1', decos: ['🐰','🌟','🍭','🎀','🍦'], textDefault: 'Kawaii ♡' },
+    'elegant-black': { name: 'Elegant Black', type: 'premium', photoCount: 2, baseLayout: '2-strip', bg: '#0a0a0a', borderColor: '#d4af37', decos: ['⭐','✨','👑'], textDefault: 'Elegant Black' },
+    'soft-pastel': { name: 'Soft Pastel', type: 'premium', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #e8daef, #d5f5e3, #fdebd0)', borderColor: '#c39bd3', decos: ['🌈','🦋','☁️','🌸'], textDefault: 'Soft Pastel' },
+    'couple-memories': { name: 'Couple Memories', type: 'premium', photoCount: 2, baseLayout: '2-strip', bg: 'linear-gradient(135deg, #fce4ec, #f8bbd0)', borderColor: '#e91e63', decos: ['❤️','💑','💕','🌹'], textDefault: 'Our Memories' },
+    'best-friends': { name: 'Best Friends', type: 'premium', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #fff9c4, #f8bbd0)', borderColor: '#ff4081', decos: ['👭','💖','🌟','🌸'], textDefault: 'Besties Forever' },
+    
+    // Seasonal layouts
+    'tet': { name: 'Tết Việt Nam', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #c62828, #ff8f00)', borderColor: '#ffd700', decos: ['🌺','🧧','🎊','🏮','🎋'], textDefault: 'Chúc Mừng Năm Mới' },
+    'valentine': { name: 'Valentine', type: 'seasonal', photoCount: 2, baseLayout: '2-strip', bg: 'linear-gradient(135deg, #e91e63, #f48fb1)', borderColor: '#ff1744', decos: ['❤️','💕','💘','🌹','🥂'], textDefault: 'Happy Valentine' },
+    'christmas': { name: 'Giáng Sinh', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #1b5e20, #b71c1c)', borderColor: '#ffffff', decos: ['🎄','⭐','❄️','🎁','🎅'], textDefault: 'Merry Christmas' },
+    'halloween': { name: 'Halloween', type: 'seasonal', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #1a0a2e, #ff6f00)', borderColor: '#ff9800', decos: ['🎃','👻','🦇','🕷️','💀'], textDefault: 'Happy Halloween' },
+    'birthday': { name: 'Sinh nhật', type: 'seasonal', photoCount: 4, baseLayout: '2x2-grid', bg: 'linear-gradient(135deg, #e1bee7, #bbdefb, #fff9c4)', borderColor: '#ff4081', decos: ['🎈','🎂','🎉','🎊','🍰'], textDefault: 'Happy Birthday!' },
+    'trung-thu': { name: 'Trung thu', type: 'seasonal', photoCount: 3, baseLayout: '3-strip', bg: 'linear-gradient(135deg, #0d1b2a, #1b263b)', borderColor: '#ffb703', decos: ['🌕','🏮','🐇','🌾'], textDefault: 'Đêm Hội Trăng Rằm' },
+    'summer': { name: 'Summer', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #e0f7fa, #fff9c4)', borderColor: '#00acc1', decos: ['🌊','🌴','☀️','🍹','🍍'], textDefault: 'Summer Vibe' },
+    'graduation': { name: 'Graduation', type: 'seasonal', photoCount: 4, baseLayout: '4-strip', bg: 'linear-gradient(135deg, #1a1a2e, #d4af37)', borderColor: '#d4af37', decos: ['🎓','⭐','🏆','📜'], textDefault: 'Congratulations!' }
 };
 
 function switchLayoutCategory(category, btnEl) {
@@ -199,43 +228,87 @@ function switchLayoutCategory(category, btnEl) {
     document.getElementById(`layoutCat${category.charAt(0).toUpperCase() + category.slice(1)}`).classList.remove('hidden');
 }
 
-function selectLayout(type) {
-    selectedLayout = type;
-    selectedTheme = null;
+function selectThemeLayout(layoutId) {
+    // 1. Basic Free Layouts
+    if (layoutId === '2-strip' || layoutId === '4-strip' || layoutId === '2x2-grid') {
+        selectedTheme = null;
+        selectedLayout = layoutId;
+        if (layoutId === '2-strip') maxImages = 2;
+        else if (layoutId === '4-strip') maxImages = 4;
+        else if (layoutId === '2x2-grid') maxImages = 4;
+        
+        document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
+        const cardEl = document.querySelector(`.card[data-layout="${layoutId}"]`);
+        if (cardEl) cardEl.classList.add('selected');
+        btnEnterRoom.disabled = false;
+        return;
+    }
     
-    document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
-    const cardEl = document.querySelector(`.card[data-layout="${type}"]`);
-    if (cardEl) cardEl.classList.add('selected');
+    // 2. Themed Free Layouts
+    if (layoutId === 'polaroid-basic') {
+        selectedTheme = {
+            id: 'polaroid-basic',
+            name: 'Polaroid Basic',
+            type: 'free',
+            photoCount: 1,
+            baseLayout: 'polaroid',
+            bg: '#fbfbf9',
+            borderColor: '#e5e5e5',
+            decos: [],
+            textDefault: 'Polaroid'
+        };
+        selectedLayout = 'polaroid';
+        maxImages = 1;
+        
+        document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
+        const cardEl = document.querySelector(`.card[data-layout="${layoutId}"]`);
+        if (cardEl) cardEl.classList.add('selected');
+        btnEnterRoom.disabled = false;
+        return;
+    }
     
-    btnEnterRoom.disabled = false;
-    
-    if (type === '2-strip') maxImages = 2;
-    else if (type === '4-strip') maxImages = 4;
-    else if (type === '2x2-grid') maxImages = 4;
-}
+    if (layoutId === 'minimal-white') {
+        selectedTheme = {
+            id: 'minimal-white',
+            name: 'Minimal White',
+            type: 'free',
+            photoCount: 3,
+            baseLayout: '3-strip',
+            bg: '#ffffff',
+            borderColor: '#f2f2f2',
+            decos: [],
+            textDefault: 'Minimalist'
+        };
+        selectedLayout = '3-strip';
+        maxImages = 3;
+        
+        document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
+        const cardEl = document.querySelector(`.card[data-layout="${layoutId}"]`);
+        if (cardEl) cardEl.classList.add('selected');
+        btnEnterRoom.disabled = false;
+        return;
+    }
 
-function selectPremiumLayout(themeId) {
+    // 3. Premium / Seasonal Layouts Lock validation
     if (!isPremiumUnlocked) {
-        pendingThemeId = themeId;
+        pendingThemeId = layoutId;
         document.getElementById('supportModal').classList.remove('hidden');
         return;
     }
     
-    const theme = THEMED_LAYOUTS[themeId];
+    const theme = THEMED_LAYOUTS[layoutId];
     if (!theme) return;
     
-    selectedTheme = { ...theme, id: themeId };
+    selectedTheme = { ...theme, id: layoutId };
     selectedLayout = theme.baseLayout;
     maxImages = theme.photoCount;
     
     document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
-    const cardEl = document.querySelector(`.card[data-layout="${themeId}"]`);
+    const cardEl = document.querySelector(`.card[data-layout="${layoutId}"]`);
     if (cardEl) cardEl.classList.add('selected');
     
     btnEnterRoom.disabled = false;
 }
-
-let pendingThemeId = null;
 
 function unlockPremium() {
     isPremiumUnlocked = true;
@@ -244,19 +317,14 @@ function unlockPremium() {
     showToast('Cảm ơn bạn đã ủng hộ! Premium đã được mở khóa 💖');
     
     if (pendingThemeId) {
-        selectPremiumLayout(pendingThemeId);
+        selectThemeLayout(pendingThemeId);
         pendingThemeId = null;
     }
 }
 
-function closeSupportModal() {
+function closeDonateModal() {
     document.getElementById('supportModal').classList.add('hidden');
-}
-
-function proceedWithLayout() {
-    document.getElementById('supportModal').classList.add('hidden');
-    hasSeenSupportPopup = true;
-    selectLayout('4-strip');
+    pendingThemeId = null;
 }
 
 function goToCamera() {
@@ -341,14 +409,16 @@ function setVirtualBackground(bgType) {
     currentVirtualBackground = bgType;
     document.querySelectorAll('#cameraTabBackground .filter-preview-box').forEach(box => box.classList.remove('active'));
     
-    // Find the clicked element based on onclick attribute or pass it as param. Here we just find by matching bgType.
+    // Highlight active background pill
     const boxes = document.querySelectorAll('#cameraTabBackground .filter-preview-box');
     boxes.forEach(box => {
-        if (box.getAttribute('onclick').includes(`'${bgType}'`)) box.classList.add('active');
+        if (box.getAttribute('onclick') && box.getAttribute('onclick').includes(`'${bgType}'`)) {
+            box.classList.add('active');
+        }
     });
 
     if (bgType !== 'none') {
-        document.getElementById('cameraVideo').style.opacity = '0';
+        cameraVideo.style.opacity = '0';
         document.getElementById('bgCanvas').classList.remove('hidden');
         if (!selfieSegmenter) {
             initSelfieSegmentation();
@@ -357,7 +427,7 @@ function setVirtualBackground(bgType) {
             segmentLoop();
         }
     } else {
-        document.getElementById('cameraVideo').style.opacity = '1';
+        cameraVideo.style.opacity = '1';
         document.getElementById('bgCanvas').classList.add('hidden');
         isSegmenting = false;
         if (segmentRAF) {
@@ -381,6 +451,8 @@ async function initSelfieSegmentation() {
         segmentLoop();
     } catch (err) {
         console.error("Selfie segmentation init error:", err);
+        showToast("Thiết bị chưa hỗ trợ tách nền. Bạn vẫn có thể dùng filter bình thường.");
+        setVirtualBackground('none');
     }
 }
 
@@ -409,90 +481,110 @@ function onSegmentationResults(results) {
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw background
-    if (currentVirtualBackground === 'blur') {
-        ctx.filter = 'blur(10px)';
-        ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-        ctx.filter = 'none';
-    } else {
-        let bgStyle = '#000';
-        if (currentVirtualBackground === 'color1') bgStyle = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)';
-        else if (currentVirtualBackground === 'color2') bgStyle = 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)';
-        else if (currentVirtualBackground === 'color3') bgStyle = 'linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%)';
-        else if (currentVirtualBackground === 'color4') bgStyle = 'linear-gradient(to right, #4facfe 0%, #00f2fe 100%)';
-        
-        if (bgStyle.startsWith('linear-gradient')) {
-            const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            if (currentVirtualBackground === 'color1') { grad.addColorStop(0, '#ff9a9e'); grad.addColorStop(1, '#fecfef'); }
-            else if (currentVirtualBackground === 'color2') { grad.addColorStop(0, '#a1c4fd'); grad.addColorStop(1, '#c2e9fb'); }
-            else if (currentVirtualBackground === 'color3') { grad.addColorStop(0, '#cfd9df'); grad.addColorStop(1, '#e2ebf0'); }
-            else if (currentVirtualBackground === 'color4') { grad.addColorStop(0, '#4facfe'); grad.addColorStop(1, '#00f2fe'); }
-            ctx.fillStyle = grad;
-        } else {
-            ctx.fillStyle = bgStyle;
-        }
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    
-    // Mask and draw the person
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
-    
-    ctx.globalCompositeOperation = 'destination-over';
-    // The background is already drawn, wait, destination-over means drawing behind existing content.
-    // So we should have drawn the person first!
-    
-    // Let's rewrite the drawing logic properly:
-    // 1. Draw mask
-    // 2. Draw person (source-in)
-    // 3. Draw background (destination-over)
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
     // 1. Draw Mask
     ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
     
-    // 2. Draw person over mask
+    // 2. Draw person over mask (source-in)
     ctx.globalCompositeOperation = 'source-in';
     ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
     
-    // 3. Draw background behind person
+    // 3. Draw background behind person (destination-over)
     ctx.globalCompositeOperation = 'destination-over';
     
     if (currentVirtualBackground === 'blur') {
         ctx.filter = 'blur(15px)';
         ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
         ctx.filter = 'none';
-    } else {
-        let bgStyle = '#000';
-        if (currentVirtualBackground === 'color1') bgStyle = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)';
-        else if (currentVirtualBackground === 'color2') bgStyle = 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)';
-        else if (currentVirtualBackground === 'color3') bgStyle = 'linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%)';
-        else if (currentVirtualBackground === 'color4') bgStyle = 'linear-gradient(to right, #4facfe 0%, #00f2fe 100%)';
-        
-        if (bgStyle.startsWith('linear-gradient')) {
-            const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-            if (currentVirtualBackground === 'color1') { grad.addColorStop(0, '#ff9a9e'); grad.addColorStop(1, '#fecfef'); }
-            else if (currentVirtualBackground === 'color2') { grad.addColorStop(0, '#a1c4fd'); grad.addColorStop(1, '#c2e9fb'); }
-            else if (currentVirtualBackground === 'color3') { grad.addColorStop(0, '#cfd9df'); grad.addColorStop(1, '#e2ebf0'); }
-            else if (currentVirtualBackground === 'color4') { grad.addColorStop(0, '#4facfe'); grad.addColorStop(1, '#00f2fe'); }
-            ctx.fillStyle = grad;
+    } 
+    // Image backgrounds (Preloaded or Custom)
+    else if (['flower', 'cafe', 'christmas', 'tet-red'].includes(currentVirtualBackground) && loadedVbgImages[currentVirtualBackground]) {
+        const bgImg = loadedVbgImages[currentVirtualBackground];
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+    } 
+    else if (currentVirtualBackground === 'custom' && customBackgroundImage) {
+        ctx.drawImage(customBackgroundImage, 0, 0, canvas.width, canvas.height);
+    }
+    // Gradient backgrounds
+    else {
+        let grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        if (currentVirtualBackground === 'studio-pink') {
+            grad.addColorStop(0, '#ff9a9e');
+            grad.addColorStop(1, '#fecfef');
+        } else if (currentVirtualBackground === 'neon-purple') {
+            grad.addColorStop(0, '#1a0030');
+            grad.addColorStop(1, '#8f00ff');
+        } else if (currentVirtualBackground === 'sky-blue') {
+            grad.addColorStop(0, '#a1c4fd');
+            grad.addColorStop(1, '#c2e9fb');
+        } else if (currentVirtualBackground === 'gradient-dream') {
+            grad.addColorStop(0, '#ff9a9e');
+            grad.addColorStop(0.5, '#fecfef');
+            grad.addColorStop(1, '#a1c4fd');
         } else {
-            ctx.fillStyle = bgStyle;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+            return;
         }
+        ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     
     ctx.restore();
 }
 
+function triggerCustomBgUpload() {
+    document.getElementById('customBgInput').click();
+}
+
+function handleCustomBgUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            customBackgroundImage = img;
+            setVirtualBackground('custom');
+            showToast('Đã tải lên hình nền ảo của bạn! 📸');
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// ================= TIMER SELECTION =================
 let captureTimer = 3;
+let countdownInterval = null;
+
 function setTimer(seconds) {
     captureTimer = seconds;
     document.querySelectorAll('.timer-pill').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(`btnTimer${seconds}`).classList.add('active');
+    
+    const activeBtn = document.getElementById(`btnTimer${seconds}`);
+    if (activeBtn) activeBtn.classList.add('active');
 }
 
+function cancelCountdown() {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    
+    isCapturing = false;
+    btnCapture.disabled = false;
+    countdownEl.classList.add('hidden');
+    document.getElementById('btnCancelCountdown').classList.add('hidden');
+    
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    showToast('Đã hủy đếm ngược chụp ảnh! 🛑');
+}
+
+// ================= PHOTO UPLOAD FALLBACK =================
 function handleUploadPhoto(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -598,13 +690,13 @@ function updateFaceGuide(detections) {
     
     const faceCenterX = face.originX + face.width / 2;
     const faceCenterY = face.originY + face.height / 2;
+    
     const targetX = vW / 2;
     const targetY = vH / 2;
     
     let diffX = faceCenterX - targetX;
     const diffY = faceCenterY - targetY;
     
-    // If mirror mode, reverse diffX for correct hint mapping
     if (currentFacingMode === 'user') {
         diffX = -diffX;
     }
@@ -641,7 +733,7 @@ function updateFaceGuide(detections) {
         oval.classList.add('aligned');
         hint.classList.add('aligned');
         
-        if (autoCaptureEnabled && !isCapturing && capturedImages.length > 0) {
+        if (autoCaptureEnabled && !isCapturing && capturedImages.length < 6) {
             if (alignTime === 0) alignTime = Date.now();
             else if (Date.now() - alignTime > 1500) {
                 startCountdown();
@@ -654,6 +746,7 @@ function updateFaceGuide(detections) {
         alignTime = 0;
     }
 }
+
 async function startCamera() {
     document.querySelector('.camera-loading').classList.remove('hidden');
     document.getElementById('cameraPlaceholder').classList.add('hidden');
@@ -675,14 +768,12 @@ async function startCamera() {
         cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
         cameraVideo.srcObject = cameraStream;
         
-        // Reset zoom UI on start
         currentZoom = 1;
         document.getElementById('zoomSlider').value = 1;
         document.getElementById('zoomLabel').textContent = '1.0x';
         applyVideoTransform();
         document.getElementById('zoomContainer').classList.remove('hidden');
         
-        // Wait for video to load
         cameraVideo.onloadedmetadata = () => {
             document.querySelector('.camera-loading').classList.add('hidden');
             document.getElementById('btnStartCamera').classList.add('hidden');
@@ -748,7 +839,6 @@ function switchCamera() {
 function updateShotCounter() {
     shotCounter.textContent = `Đã chụp ${capturedImages.length}/6`;
     
-    // Update thumbnails
     thumbnailsContainer.innerHTML = '';
     capturedImages.forEach(src => {
         const img = document.createElement('img');
@@ -758,23 +848,20 @@ function updateShotCounter() {
     });
 }
 
-// Giọng nói đếm ngược tiếng Việt sử dụng Web Speech API
 function speakVietnamese(text) {
     if ('speechSynthesis' in window) {
-        // Hủy bất kỳ giọng nói nào đang phát trước đó để tránh đè âm thanh
         window.speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'vi-VN';
         
-        // Cố gắng tìm giọng đọc tiếng Việt chuẩn
         const voices = window.speechSynthesis.getVoices();
         const viVoice = voices.find(voice => voice.lang.includes('vi'));
         if (viVoice) {
             utterance.voice = viVoice;
         }
         
-        utterance.rate = 1.3; // Tăng tốc độ đọc một chút cho đúng nhịp đếm ngược
+        utterance.rate = 1.3;
         utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
     }
@@ -796,11 +883,16 @@ function startCountdown() {
     countdownEl.textContent = counter;
     countdownEl.classList.remove('hidden');
     countdownEl.classList.add('pop');
+    document.getElementById('btnCancelCountdown').classList.remove('hidden');
     
-    // Đọc số đầu tiên
+    // Play countdown beep
+    if (beepAudio.readyState >= 2) {
+        beepAudio.currentTime = 0;
+        beepAudio.play().catch(e => console.log(e));
+    }
     speakVietnamese(counter.toString());
     
-    const timer = setInterval(() => {
+    countdownInterval = setInterval(() => {
         counter--;
         
         if (counter > 0) {
@@ -809,16 +901,21 @@ function startCountdown() {
             void countdownEl.offsetWidth; // trigger reflow
             countdownEl.classList.add('pop');
             
-            // Đọc số tiếp theo
+            // Beep and speak
+            if (beepAudio.readyState >= 2) {
+                beepAudio.currentTime = 0;
+                beepAudio.play().catch(e => console.log(e));
+            }
             speakVietnamese(counter.toString());
         } else {
-            clearInterval(timer);
+            clearInterval(countdownInterval);
+            countdownInterval = null;
             countdownEl.classList.add('hidden');
+            document.getElementById('btnCancelCountdown').classList.add('hidden');
             capturePhoto();
         }
     }, 1000);
 }
-
 
 function drawVideoCoverToCanvas(video, canvas, isMirror = true) {
     const ctx = canvas.getContext('2d');
@@ -856,7 +953,7 @@ function drawVideoCoverToCanvas(video, canvas, isMirror = true) {
     const filterObj = CAMERA_FILTERS[activeCameraFilter];
     ctx.filter = filterObj.css;
     
-    // Simulate beauty smoothing using globalAlpha hack
+    // Beauty smoothing filter using blur composite hack
     if (filterObj.beauty.smoothing > 0) {
         ctx.drawImage(video, drawX, drawY, drawW, drawH);
         
@@ -879,7 +976,7 @@ function drawVideoCoverToCanvas(video, canvas, isMirror = true) {
     
     ctx.globalAlpha = 1.0;
     
-    // Draw Overlay color
+    // Draw filter overlays
     if (filterObj.overlay && filterObj.overlay !== 'transparent') {
         ctx.fillStyle = filterObj.overlay;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -889,17 +986,16 @@ function drawVideoCoverToCanvas(video, canvas, isMirror = true) {
 }
 
 function capturePhoto() {
-    // Flash effect
+    // Shutter flash animation
     flashEl.classList.add('active');
     setTimeout(() => flashEl.classList.remove('active'), 300);
     
-    // Play beep sound instead of shutter click
-    if(beepAudio.readyState >= 2) {
-        beepAudio.currentTime = 0;
-        beepAudio.play().catch(e => console.log(e));
+    // Play shutter sound
+    if(shutterAudio.readyState >= 2) {
+        shutterAudio.currentTime = 0;
+        shutterAudio.play().catch(e => console.log(e));
     }
     
-    // Capture 3:4 canvas
     captureCanvas.width = 900;
     captureCanvas.height = 1200;
     
@@ -921,12 +1017,12 @@ function capturePhoto() {
         isCapturing = false;
         btnCapture.disabled = false;
         
-        // Tự động kích hoạt đếm ngược chụp tấm tiếp theo sau 2 giây chuẩn bị dáng
+        // Auto capture delay to adjust pose
         setTimeout(() => {
             if (cameraStream && screens.camera.classList.contains('active') && !isCapturing) {
                 startCountdown();
             }
-        }, 2000); // 2000ms (2 giây) chuẩn bị tạo dáng mới
+        }, 2200);
     }
 }
 
@@ -936,7 +1032,11 @@ function resetShoot() {
     selectedSelectionIndices = [];
     isCapturing = false;
     
-    // Tắt tự động chụp để chờ người dùng tự bấm chụp
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    
     autoCaptureEnabled = false;
     const autoToggle = document.getElementById('autoCaptureToggle');
     if (autoToggle) autoToggle.checked = false;
@@ -955,12 +1055,10 @@ function goToSelection() {
     switchScreen('selection');
     selectedSelectionIndices = [];
     
-    // Cập nhật tiêu đề hướng dẫn chọn ảnh
     const subtitle = document.getElementById('selectionSubtitle');
     subtitle.textContent = `Chọn 0/${maxImages} bức ảnh bạn thích nhất ✨`;
     
     document.getElementById('btnConfirmSelection').disabled = true;
-    
     renderSelectionGrid();
 }
 
@@ -996,24 +1094,19 @@ function renderSelectionGrid() {
 function toggleSelectPhoto(index) {
     const selIndex = selectedSelectionIndices.indexOf(index);
     if (selIndex > -1) {
-        // Bỏ chọn
         selectedSelectionIndices.splice(selIndex, 1);
     } else {
-        // Chọn
         if (selectedSelectionIndices.length < maxImages) {
             selectedSelectionIndices.push(index);
         } else {
-            // Đã đạt giới hạn: tự động bỏ phần tử đầu tiên và thêm mới vào sau
             selectedSelectionIndices.shift();
             selectedSelectionIndices.push(index);
         }
     }
     
-    // Cập nhật số lượng ảnh đã chọn
     const subtitle = document.getElementById('selectionSubtitle');
     subtitle.textContent = `Chọn ${selectedSelectionIndices.length}/${maxImages} bức ảnh bạn thích nhất ✨`;
     
-    // Bật/tắt nút Xác nhận
     const btn = document.getElementById('btnConfirmSelection');
     if (selectedSelectionIndices.length === maxImages) {
         btn.disabled = false;
@@ -1027,7 +1120,6 @@ function toggleSelectPhoto(index) {
 function confirmPhotoSelection() {
     if (selectedSelectionIndices.length !== maxImages) return;
     
-    // Gán danh sách ảnh được chọn theo thứ tự người dùng nhấp chọn
     selectedImages = selectedSelectionIndices.map(idx => capturedImages[idx]);
     goToEditor();
 }
@@ -1042,12 +1134,16 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
     
-    document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
-    document.getElementById(`tab-${tabId}`).style.display = 'block';
+    const activeTabBtn = document.getElementById(`btnTab${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`);
+    if (activeTabBtn) activeTabBtn.classList.add('active');
+    
+    const tabEl = document.getElementById(`tab-${tabId}`);
+    if (tabEl) tabEl.style.display = 'block';
 }
 
 function renderStickers() {
     const list = document.getElementById('stickerList');
+    if (!list) return;
     list.innerHTML = '';
     stickersList.forEach(emoji => {
         const span = document.createElement('span');
@@ -1064,66 +1160,67 @@ function addSticker(emoji) {
         x: interactiveLayer.offsetWidth / 2,
         y: interactiveLayer.offsetHeight / 2,
         fontSize: 60,
-        rotation: 0
+        rotation: 0,
+        opacity: 1
     };
     draggableElements.push(el);
     renderInteractiveElements();
     selectElement(draggableElements.length - 1);
 }
 
-function addText() {
+// ================= UPGRADED TEXT EDITOR ACTIONS =================
+function addCustomText() {
     const input = document.getElementById('textInput');
-    if (!input.value.trim()) return;
+    const content = input.value.trim();
+    if (!content) return;
     
     const font = document.getElementById('fontSelect').value;
     const color = document.getElementById('textColor').value;
-    const size = parseInt(document.getElementById('textSize').value) || 30;
+    const size = parseInt(document.getElementById('textSize').value) || 36;
+    const strokeWidth = parseInt(document.getElementById('textStroke').value) || 0;
+    const strokeColor = document.getElementById('strokeColor').value;
+    const shadowBlur = parseInt(document.getElementById('textShadow').value) || 0;
+    const shadowColor = document.getElementById('shadowColor').value;
+    const opacity = parseFloat(document.getElementById('textOpacity').value) / 100 || 1.0;
+    const rotation = parseInt(document.getElementById('textRotation').value) || 0;
     
+    const weight = document.getElementById('toggleBold').classList.contains('active') ? '700' : '400';
+    const italic = document.getElementById('toggleItalic').classList.contains('active');
+    
+    let align = 'center';
+    if (document.getElementById('btnAlignLeft').classList.contains('active')) align = 'left';
+    else if (document.getElementById('btnAlignRight').classList.contains('active')) align = 'right';
+
     const el = {
         type: 'text',
-        content: input.value,
+        content: content,
         x: interactiveLayer.offsetWidth / 2,
         y: interactiveLayer.offsetHeight / 2,
         fontSize: size,
         font: font,
         color: color,
-        weight: '700',
-        italic: false,
-        rotation: 0,
-        opacity: 1,
-        strokeColor: '#000000',
-        strokeWidth: 0,
-        shadowColor: '#000000',
-        shadowBlur: 0
+        weight: weight,
+        italic: italic,
+        align: align,
+        rotation: rotation,
+        opacity: opacity,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+        shadowColor: shadowColor,
+        shadowBlur: shadowBlur
     };
     
     draggableElements.push(el);
     input.value = '';
     renderInteractiveElements();
     selectElement(draggableElements.length - 1);
+    showToast('Đã thêm chữ thành công! ✍️');
 }
 
-function quickAddText(text) {
-    const el = {
-        type: 'text',
-        content: text,
-        x: interactiveLayer.offsetWidth / 2,
-        y: interactiveLayer.offsetHeight * 0.8,
-        fontSize: 36,
-        font: 'Pacifico',
-        color: '#ff5fb7',
-        weight: '400',
-        italic: false,
-        rotation: 0,
-        opacity: 1,
-        strokeColor: '#000000',
-        strokeWidth: 0,
-        shadowColor: '#000000',
-        shadowBlur: 4
-    };
-    draggableElements.push(el);
-    renderInteractiveElements();
-    selectElement(draggableElements.length - 1);
+function handleTextInputChange(val) {
+    if (selectedElementIndex > -1 && draggableElements[selectedElementIndex].type === 'text') {
+        updateSelectedTextProperty('content', val);
+    }
 }
 
 function setTextColor(color) {
@@ -1137,6 +1234,8 @@ function toggleTextBold() {
         el.weight = el.weight === '700' ? '400' : '700';
         document.getElementById('toggleBold').classList.toggle('active', el.weight === '700');
         renderInteractiveElements();
+    } else {
+        document.getElementById('toggleBold').classList.toggle('active');
     }
 }
 
@@ -1146,23 +1245,68 @@ function toggleTextItalic() {
         el.italic = !el.italic;
         document.getElementById('toggleItalic').classList.toggle('active', el.italic);
         renderInteractiveElements();
+    } else {
+        document.getElementById('toggleItalic').classList.toggle('active');
     }
 }
 
-function setTextInput(text) {
-    const input = document.getElementById('textInput');
-    input.value = text;
-    updateSelectedTextProperty('content', text);
+function setTextAlign(align) {
+    updateSelectedTextProperty('align', align);
+    
+    document.querySelectorAll('.align-pill').forEach(pill => pill.classList.remove('active'));
+    if (align === 'left') document.getElementById('btnAlignLeft').classList.add('active');
+    else if (align === 'center') document.getElementById('btnAlignCenter').classList.add('active');
+    else if (align === 'right') document.getElementById('btnAlignRight').classList.add('active');
 }
 
 function updateSelectedTextProperty(prop, value) {
     if (selectedElementIndex > -1) {
         const el = draggableElements[selectedElementIndex];
-        if (el.type === 'text') {
-            el[prop] = value;
-            renderInteractiveElements();
-        }
+        el[prop] = value;
+        renderInteractiveElements();
     }
+}
+
+// Preset Quick Text suggestions with unique beautiful styling presets
+const QUICK_TEXT_PRESETS = {
+    'Best Day Ever': { font: 'Pacifico', color: '#ff5fb7', size: 48, shadowBlur: 6, shadowColor: '#000000', weight: '400', align: 'center' },
+    'Lovely Moments': { font: 'Playfair Display', color: '#ffffff', size: 42, shadowBlur: 8, shadowColor: '#ff5fb7', weight: '700', italic: true, align: 'center' },
+    'Photobooth Pro': { font: 'Bebas Neue', color: '#b56cff', size: 52, strokeWidth: 2, strokeColor: '#000000', weight: '700', align: 'center' },
+    'Cao Bá Thiên': { font: 'Syne', color: '#ffd700', size: 45, shadowBlur: 10, shadowColor: '#b56cff', weight: '800', align: 'center' },
+    'My Favorite Day': { font: 'Space Grotesk', color: '#aaffc3', size: 38, weight: '700', align: 'center' },
+    'Made with love': { font: 'Pacifico', color: '#ff3366', size: 40, weight: '400', align: 'center' },
+    'Happy Time': { font: 'DM Sans', color: '#ffffff', size: 36, shadowBlur: 5, shadowColor: '#000000', weight: '700', align: 'center' },
+    'Cute Moment': { font: 'Playfair Display', color: '#ff9a9e', size: 44, weight: '700', italic: true, align: 'center' },
+    'Love Yourself': { font: 'Syne', color: '#b56cff', size: 38, weight: '700', align: 'center' },
+    '2026 Memories': { font: 'Space Grotesk', color: '#ffffff', size: 36, strokeWidth: 1.5, strokeColor: '#ff5fb7', weight: '800', align: 'center' }
+};
+
+function quickAddText(textStr) {
+    const preset = QUICK_TEXT_PRESETS[textStr] || { font: 'Pacifico', color: '#ff5fb7', size: 36, weight: '400', align: 'center' };
+    
+    const el = {
+        type: 'text',
+        content: textStr,
+        x: interactiveLayer.offsetWidth / 2,
+        y: interactiveLayer.offsetHeight * 0.82, // position near bottom
+        fontSize: preset.size,
+        font: preset.font,
+        color: preset.color,
+        weight: preset.weight,
+        italic: preset.italic || false,
+        align: preset.align,
+        rotation: 0,
+        opacity: 1,
+        strokeColor: preset.strokeColor || '#000000',
+        strokeWidth: preset.strokeWidth || 0,
+        shadowColor: preset.shadowColor || '#000000',
+        shadowBlur: preset.shadowBlur || 0
+    };
+    
+    draggableElements.push(el);
+    renderInteractiveElements();
+    selectElement(draggableElements.length - 1);
+    showToast(`Đã thêm gợi ý: "${textStr}"! 🌟`);
 }
 
 function setFrameBg(bg) {
@@ -1173,15 +1317,21 @@ function setFrameBg(bg) {
 function applyFilter(filter) {
     currentFilter = filter;
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`.filter-btn[onclick="applyFilter('${filter}')"]`).classList.add('active');
+    
+    const activeFilterBtn = document.querySelector(`.filter-btn[onclick="applyFilter('${filter}')"]`);
+    if (activeFilterBtn) activeFilterBtn.classList.add('active');
+    
     updateCanvasCSS();
 }
 
 function setOverlay(overlay) {
     currentOverlay = overlay;
     document.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`.effect-btn[onclick="setOverlay('${overlay}')"]`).classList.add('active');
-    renderPhotobooth(); // overlay is drawn on canvas
+    
+    const activeOverlayBtn = document.querySelector(`.effect-btn[onclick="setOverlay('${overlay}')"]`);
+    if (activeOverlayBtn) activeOverlayBtn.classList.add('active');
+    
+    renderPhotobooth();
 }
 
 function toggleDateStamp() {
@@ -1198,7 +1348,6 @@ function updateAdjustments() {
 }
 
 function updateCanvasCSS() {
-    // Generate CSS filter string
     let cssFilter = `
         brightness(${adjustments.brightness}%) 
         contrast(${adjustments.contrast}%) 
@@ -1223,45 +1372,61 @@ function updateCanvasCSS() {
     finalCanvas.style.filter = cssFilter;
 }
 
-// ================= CANVAS RENDERING =================
+// ================= COMPREHENSIVE CANVAS THEME RENDERING =================
 async function renderPhotobooth() {
     const ctx = finalCanvas.getContext('2d');
     
-    // Define dimensions based on layout
     let width, height;
-    let imgRects = []; // {x, y, w, h}
+    let imgRects = [];
     
     const padding = 40;
     const spacing = 30;
     const imgWidth = 600;
     const imgHeight = 400;
 
-    if (selectedLayout === '2-strip') {
+    // 1. Polaroid structure (1 photo)
+    if (selectedLayout === 'polaroid') {
+        width = 700;
+        height = 880;
+        imgRects = [{ x: 50, y: 50, w: 600, h: 600 }];
+    } 
+    // 2. Full Magazine Cover structure (1 photo occupies whole canvas)
+    else if (selectedLayout === 'magazine') {
+        width = 700;
+        height = 950;
+        imgRects = [{ x: 0, y: 0, w: 700, h: 950 }];
+    }
+    // 3. 2 Photos vertically
+    else if (selectedLayout === '2-strip') {
         width = imgWidth + padding * 2;
-        height = (imgHeight * 2) + spacing + padding * 3; // Extra padding at bottom for branding
-        
+        height = (imgHeight * 2) + spacing + padding * 3;
         imgRects = [
             { x: padding, y: padding, w: imgWidth, h: imgHeight },
             { x: padding, y: padding + imgHeight + spacing, w: imgWidth, h: imgHeight }
         ];
     } 
+    // 4. 3 Photos vertically (Minimal White / Trung Thu)
+    else if (selectedLayout === '3-strip') {
+        width = imgWidth + padding * 2;
+        height = (imgHeight * 3) + (spacing * 2) + padding * 3;
+        imgRects = [
+            { x: padding, y: padding, w: imgWidth, h: imgHeight },
+            { x: padding, y: padding + imgHeight + spacing, w: imgWidth, h: imgHeight },
+            { x: padding, y: padding + (imgHeight + spacing) * 2, w: imgWidth, h: imgHeight }
+        ];
+    }
+    // 5. 4 Photos vertically
     else if (selectedLayout === '4-strip') {
         width = imgWidth + padding * 2;
         height = (imgHeight * 4) + (spacing * 3) + padding * 3;
-        
         for (let i = 0; i < 4; i++) {
-            imgRects.push({
-                x: padding, 
-                y: padding + i * (imgHeight + spacing), 
-                w: imgWidth, 
-                h: imgHeight
-            });
+            imgRects.push({ x: padding, y: padding + i * (imgHeight + spacing), w: imgWidth, h: imgHeight });
         }
     } 
+    // 6. 2x2 Grid (4 photos)
     else if (selectedLayout === '2x2-grid') {
         width = (imgWidth * 2) + spacing + padding * 2;
         height = (imgHeight * 2) + spacing + padding * 3;
-        
         imgRects = [
             { x: padding, y: padding, w: imgWidth, h: imgHeight },
             { x: padding + imgWidth + spacing, y: padding, w: imgWidth, h: imgHeight },
@@ -1273,11 +1438,10 @@ async function renderPhotobooth() {
     finalCanvas.width = width;
     finalCanvas.height = height;
     
-    // Size interactive layer exactly to match canvas rendered size
+    // Scale editor layer
     interactiveLayer.style.width = width + 'px';
     interactiveLayer.style.height = height + 'px';
     
-    // Scale down visual display via CSS to fit container, but keep logical coords matching
     const wrapper = document.getElementById('canvasWrapper');
     const scale = Math.min(
         (wrapper.clientWidth - 40) / width, 
@@ -1288,12 +1452,11 @@ async function renderPhotobooth() {
     finalCanvas.style.height = `${height * scale}px`;
     interactiveLayer.style.transform = `translate(-50%, -50%) scale(${scale})`;
     
-    // 1. Draw Background
+    // 1. Draw Background Frame
     const bgToUse = selectedTheme ? selectedTheme.bg : frameBg;
     
     if (bgToUse.startsWith('linear-gradient')) {
         const gradient = ctx.createLinearGradient(0, 0, width, height);
-        // Parse colors from gradient string
         const colorMatches = bgToUse.match(/#[0-9a-fA-F]{3,6}/g);
         if (colorMatches && colorMatches.length >= 2) {
             colorMatches.forEach((c, i) => gradient.addColorStop(i / (colorMatches.length - 1), c));
@@ -1308,47 +1471,47 @@ async function renderPhotobooth() {
         ctx.fillRect(0, 0, width, height);
     }
 
-    // 1b. Draw Effects / Overlay on the background (behind photos)
+    // 1b. Render decorative overlays behind images
     if (currentOverlay !== 'none') {
         drawOverlay(ctx, width, height, currentOverlay);
     }
     
-    // 1c. Draw themed decorations (behind photos)
-    if (selectedTheme && selectedTheme.decos) {
+    if (selectedTheme && selectedTheme.decos && selectedTheme.id !== 'magazine-cover') {
         drawThemedDecorations(ctx, width, height, selectedTheme.decos);
     }
 
-    // 2. Draw Images (Object-fit cover)
+    // 2. Draw Photos with clean scaling and round borders
     for (let i = 0; i < maxImages; i++) {
         if (!selectedImages[i]) continue;
         
         const rect = imgRects[i];
-        
         const img = new Image();
         img.src = selectedImages[i];
         await new Promise(r => img.onload = r);
         
-        // Draw themed border if applicable
-        if (selectedTheme && selectedTheme.borderColor) {
+        // Border rendering
+        if (selectedTheme && selectedTheme.borderColor && selectedTheme.id !== 'magazine-cover') {
             ctx.save();
             ctx.strokeStyle = selectedTheme.borderColor;
             ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.roundRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4, 17);
+            ctx.roundRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4, selectedLayout === 'polaroid' ? 6 : 14);
             ctx.stroke();
             ctx.restore();
         }
         
-        // Draw with border radius simulation using clipping
         ctx.save();
         ctx.beginPath();
-        ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 15);
+        // Magazine cover photo doesn't have borders
+        if (selectedTheme && selectedTheme.id === 'magazine-cover') {
+            ctx.rect(rect.x, rect.y, rect.w, rect.h);
+        } else {
+            ctx.roundRect(rect.x, rect.y, rect.w, rect.h, selectedLayout === 'polaroid' ? 4 : 12);
+        }
         ctx.clip();
         
-        // calculate cover
         const imgAspect = img.width / img.height;
         const rectAspect = rect.w / rect.h;
-        
         let drawW, drawH, drawX, drawY;
         
         if (imgAspect > rectAspect) {
@@ -1367,78 +1530,80 @@ async function renderPhotobooth() {
         ctx.restore();
     }
     
-    // 3. Draw Branding & Date
-    const brandingText = selectedTheme ? selectedTheme.textDefault : 'Photobooth Pro';
-    const textColor = selectedTheme ? (selectedTheme.borderColor || '#fff') : getTextColorForBg(bgToUse);
-    ctx.fillStyle = textColor;
+    // 3. Draw Brand Branding & Date stamp
+    let brandingText = selectedTheme ? selectedTheme.textDefault : 'Photobooth Pro';
+    let textColor = selectedTheme ? (selectedTheme.borderColor || '#fff') : getTextColorForBg(bgToUse);
+    
+    ctx.save();
     ctx.textAlign = 'center';
     
-    ctx.font = 'bold 30px "Syne", sans-serif';
-    ctx.fillText(brandingText, width / 2, height - padding / 1.5);
-    
-    if (showDateStamp) {
-        const date = new Date();
-        const dateStr = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
-        ctx.font = '500 20px "Space Grotesk", monospace';
-        ctx.textAlign = 'right';
-        ctx.fillText(dateStr, width - padding, height - padding / 1.5);
+    if (selectedTheme && selectedTheme.id === 'magazine-cover') {
+        // Outstanding VOGUE style brand text overlaid on top of image
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 82px "Playfair Display", serif';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 12;
+        ctx.fillText(brandingText, width / 2, 130);
+    } else {
+        ctx.fillStyle = textColor;
+        ctx.font = 'bold 30px "Syne", sans-serif';
+        ctx.fillText(brandingText, width / 2, height - padding / 1.5);
+        
+        if (showDateStamp) {
+            const date = new Date();
+            const dateStr = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+            ctx.font = '500 20px "Space Grotesk", monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText(dateStr, width - padding, height - padding / 1.5);
+        }
     }
+    ctx.restore();
     
-    // 3b. Draw themed decorations on top (foreground)
-    if (selectedTheme && selectedTheme.decos) {
+    // 3b. Foreground premium theme decorations
+    if (selectedTheme && selectedTheme.decos && selectedTheme.id !== 'magazine-cover') {
         drawThemedDecorationsTop(ctx, width, height, selectedTheme.decos);
     }
 }
 
-// Utility to determine if text should be white or black based on bg
 function getTextColorForBg(bg) {
     if (bg === '#ffffff' || bg === '#ffd1dc' || bg === '#aaffc3' || bg === '#fffacd') return '#000000';
     return '#ffffff';
 }
 
-// Draw themed emoji decorations behind photos
 function drawThemedDecorations(ctx, w, h, decos) {
     ctx.save();
-    // Seeded random for consistent layout
     let seed = 42;
     const rng = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
     
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 22; i++) {
         const emoji = decos[Math.floor(rng() * decos.length)];
         ctx.save();
-        ctx.globalAlpha = 0.15 + rng() * 0.15;
+        ctx.globalAlpha = 0.12 + rng() * 0.15;
         ctx.translate(rng() * w, rng() * h);
         ctx.rotate(rng() * Math.PI * 2);
-        ctx.font = `${20 + rng() * 30}px sans-serif`;
+        ctx.font = `${22 + rng() * 28}px sans-serif`;
         ctx.fillText(emoji, 0, 0);
         ctx.restore();
     }
     ctx.restore();
 }
 
-// Draw themed emoji decorations on top (foreground corners & edges)
 function drawThemedDecorationsTop(ctx, w, h, decos) {
     ctx.save();
     const size = 28;
     ctx.font = `${size}px sans-serif`;
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = 0.85;
     
-    // Top-left corner cluster
-    decos.forEach((emoji, i) => {
-        ctx.fillText(emoji, 8 + i * 30, 30);
+    // Top corners
+    decos.slice(0, 3).forEach((emoji, i) => {
+        ctx.fillText(emoji, 15 + i * 32, 35);
+        ctx.fillText(emoji, w - 45 - i * 32, 35);
     });
     
-    // Top-right corner
-    decos.forEach((emoji, i) => {
-        ctx.fillText(emoji, w - 35 - i * 30, 30);
-    });
-    
-    // Bottom-left
-    ctx.fillText(decos[0], 10, h - 55);
-    if (decos[1]) ctx.fillText(decos[1], 40, h - 55);
-    
-    // Bottom-right
-    ctx.fillText(decos[decos.length - 1], w - 35, h - 55);
+    // Bottom corners
+    ctx.fillText(decos[0], 15, h - 55);
+    if (decos[1]) ctx.fillText(decos[1], 48, h - 55);
+    ctx.fillText(decos[decos.length - 1], w - 45, h - 55);
     
     ctx.restore();
 }
@@ -1447,17 +1612,17 @@ function drawOverlay(ctx, w, h, type) {
     ctx.save();
     
     if (type === 'sparkle') {
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        for(let i=0; i<50; i++) {
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        for(let i=0; i<60; i++) {
             ctx.beginPath();
-            ctx.arc(Math.random()*w, Math.random()*h, Math.random()*3, 0, Math.PI*2);
+            ctx.arc(Math.random()*w, Math.random()*h, Math.random()*3.5, 0, Math.PI*2);
             ctx.fill();
         }
     } else if (type === 'grain') {
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
         for(let i=0; i<w; i+=4) {
             for(let j=0; j<h; j+=4) {
-                if(Math.random() > 0.5) ctx.fillRect(i, j, 2, 2);
+                if(Math.random() > 0.48) ctx.fillRect(i, j, 2, 2);
             }
         }
     } else if (['hearts', 'stars', 'flowers', 'butterflies', 'music'].includes(type)) {
@@ -1467,30 +1632,29 @@ function drawOverlay(ctx, w, h, type) {
         if (type === 'butterflies') char = '🦋';
         if (type === 'music') char = '🎵';
         
-        for(let i=0; i<40; i++) {
+        for(let i=0; i<35; i++) {
             ctx.save();
             ctx.translate(Math.random()*w, Math.random()*h);
             ctx.rotate(Math.random() * Math.PI * 2);
-            const size = 15 + Math.random() * 25;
+            const size = 18 + Math.random() * 22;
             ctx.font = `${size}px Arial`;
             ctx.fillText(char, 0, 0);
             ctx.restore();
         }
     } else if (type === 'bubbles') {
-        for(let i=0; i<50; i++) {
+        for(let i=0; i<45; i++) {
             const bx = Math.random()*w;
             const by = Math.random()*h;
-            const br = 10 + Math.random()*25;
+            const br = 12 + Math.random()*20;
             ctx.beginPath();
             ctx.arc(bx, by, br, 0, Math.PI*2);
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+            ctx.lineWidth = 1.8;
             ctx.stroke();
             
-            // Add tiny highlight to bubble
             ctx.beginPath();
             ctx.arc(bx - br*0.3, by - br*0.3, br*0.15, 0, Math.PI*2);
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
             ctx.fill();
         }
     }
@@ -1498,14 +1662,12 @@ function drawOverlay(ctx, w, h, type) {
     ctx.restore();
 }
 
-
-// ================= DRAG & DROP ELEMENTS (HTML Overlay Layer) =================
+// ================= DRAG & DROP ELEMENTS =================
 function setupInteractiveLayer() {
     interactiveLayer.addEventListener('mousedown', handleDragStart);
     interactiveLayer.addEventListener('mousemove', handleDragMove);
     window.addEventListener('mouseup', handleDragEnd);
     
-    // Touch support
     interactiveLayer.addEventListener('touchstart', handleDragStart, {passive: false});
     interactiveLayer.addEventListener('touchmove', handleDragMove, {passive: false});
     window.addEventListener('touchend', handleDragEnd);
@@ -1533,6 +1695,8 @@ function renderInteractiveElements() {
             div.style.fontWeight = el.weight || '700';
             div.style.fontStyle = el.italic ? 'italic' : 'normal';
             div.style.opacity = el.opacity !== undefined ? el.opacity : 1;
+            div.style.textAlign = el.align || 'center';
+            
             if (el.strokeWidth > 0) {
                 div.style.webkitTextStroke = `${el.strokeWidth}px ${el.strokeColor || '#000'}`;
             }
@@ -1542,7 +1706,6 @@ function renderInteractiveElements() {
             div.textContent = el.content;
         }
         
-        // Add resize handle
         const handle = document.createElement('div');
         handle.className = 'resize-handle';
         div.appendChild(handle);
@@ -1562,7 +1725,6 @@ function selectElement(index) {
     selectedElementIndex = index;
     renderInteractiveElements();
     
-    // Auto-fill controls if text is selected
     if (index > -1 && draggableElements[index].type === 'text') {
         const el = draggableElements[index];
         document.getElementById('textInput').value = el.content;
@@ -1580,10 +1742,16 @@ function selectElement(index) {
         document.getElementById('opacityVal').textContent = Math.round((el.opacity || 1) * 100);
         document.getElementById('textRotation').value = el.rotation || 0;
         document.getElementById('rotationVal').textContent = el.rotation || 0;
+        
         document.getElementById('toggleBold').classList.toggle('active', el.weight === '700');
         document.getElementById('toggleItalic').classList.toggle('active', el.italic === true);
         
-        // Auto-switch to text tab
+        const align = el.align || 'center';
+        document.querySelectorAll('.align-pill').forEach(pill => pill.classList.remove('active'));
+        if (align === 'left') document.getElementById('btnAlignLeft').classList.add('active');
+        else if (align === 'center') document.getElementById('btnAlignCenter').classList.add('active');
+        else if (align === 'right') document.getElementById('btnAlignRight').classList.add('active');
+        
         switchTab('text');
     }
 }
@@ -1593,18 +1761,17 @@ function deleteSelectedElement() {
         draggableElements.splice(selectedElementIndex, 1);
         selectedElementIndex = -1;
         renderInteractiveElements();
+        showToast('Đã xóa chữ thành công! 🗑️');
     }
 }
 
-// Drag logic
-let actionType = null; // 'drag' or 'resize'
+// Drag & Resize execution
+let actionType = null;
 let initialDist = 0;
 let initialSize = 0;
 
 function handleDragStart(e) {
     const target = e.target;
-    
-    // Find parent draggable if clicked on text/child
     const draggable = target.closest('.draggable-element');
     
     if (target.classList.contains('resize-handle')) {
@@ -1629,15 +1796,11 @@ function handleDragStart(e) {
         isDragging = true;
         
         const evt = e.touches ? e.touches[0] : e;
-        // Calculate offset within the element
-        const rect = draggable.getBoundingClientRect();
-        
         dragStartX = evt.clientX;
         dragStartY = evt.clientY;
         
         selectElement(selectedElementIndex);
     } else {
-        // Clicked outside
         selectElement(-1);
     }
 }
@@ -1651,9 +1814,7 @@ function handleDragMove(e) {
     const deltaX = evt.clientX - dragStartX;
     const deltaY = evt.clientY - dragStartY;
     
-    // Scale delta back to canvas logical coordinates
     const scale = interactiveLayer.getBoundingClientRect().width / finalCanvas.width;
-    
     const el = draggableElements[selectedElementIndex];
     
     if (actionType === 'drag') {
@@ -1662,7 +1823,6 @@ function handleDragMove(e) {
         dragStartX = evt.clientX;
         dragStartY = evt.clientY;
     } else if (actionType === 'resize') {
-        // Simple resize based on drag distance
         const sign = (deltaX > 0 || deltaY > 0) ? 1 : (deltaX < 0 && deltaY < 0 ? -1 : (deltaX - deltaY > 0 ? 1 : -1));
         const dist = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
         el.fontSize = Math.max(10, el.fontSize + (dist/scale) * sign * 0.5);
@@ -1678,22 +1838,18 @@ function handleDragEnd(e) {
     actionType = null;
 }
 
-// ================= DOWNLOAD =================
+// ================= HIGH RES EXPORT =================
 function downloadImage() {
-    selectElement(-1); // Deselect elements so handles don't render
+    selectElement(-1); 
     
-    // We need to render the HTML draggable elements onto the actual canvas before downloading.
-    // Create an offscreen canvas to combine everything
     const dlCanvas = document.createElement('canvas');
     dlCanvas.width = finalCanvas.width;
     dlCanvas.height = finalCanvas.height;
     const ctx = dlCanvas.getContext('2d');
     
-    // 1. Draw the base canvas (which has bg, images, overlays)
-    // NOTE: We need to apply CSS filters manually to the downloaded canvas!
+    // Apply composite image adjustment filter
     ctx.filter = `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%) blur(${adjustments.blur}px)`;
     
-    // Add specific filter styles
     switch (currentFilter) {
         case 'beauty': ctx.filter += ' blur(0.5px) brightness(110%) saturate(110%)'; break;
         case 'vintage': ctx.filter += ' sepia(50%) contrast(120%) brightness(90%) hue-rotate(-10deg)'; break;
@@ -1708,16 +1864,16 @@ function downloadImage() {
     }
     
     ctx.drawImage(finalCanvas, 0, 0);
-    ctx.filter = 'none'; // reset filter for text/stickers
+    ctx.filter = 'none'; 
     
-    // 2. Draw draggable elements
+    // Draw Draggable text and stickers onto compiled high-res canvas
     draggableElements.forEach(el => {
         ctx.save();
         ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1;
         ctx.translate(el.x, el.y);
         ctx.rotate((el.rotation || 0) * Math.PI / 180);
         
-        ctx.textAlign = 'center';
+        ctx.textAlign = el.align || 'center';
         ctx.textBaseline = 'middle';
         
         if (el.type === 'sticker') {
@@ -1746,16 +1902,15 @@ function downloadImage() {
         ctx.restore();
     });
     
-    // Trigger download
     const link = document.createElement('a');
     link.download = `photobooth-pro-${Date.now()}.png`;
     link.href = dlCanvas.toDataURL('image/png', 1.0);
     link.click();
     
-    showToast('Tải ảnh thành công! 🎉');
+    showToast('Đã tải ảnh PNG chất lượng cao thành công! 🎉');
 }
 
-// ================= SHARE =================
+// ================= SHARING (WEB SHARE API) =================
 async function shareFinalImage() {
     try {
         const dataUrl = getFinalImageDataUrl();
@@ -1766,15 +1921,16 @@ async function shareFinalImage() {
             await navigator.share({
                 files: [file],
                 title: 'Photobooth Pro',
-                text: 'Ảnh photobooth của tôi ✨'
+                text: 'Ảnh chụp photobooth cực xinh của tôi ✨'
             });
+            showToast('Đã chia sẻ thành công! 📱');
         } else {
-            showToast('Trình duyệt chưa hỗ trợ chia sẻ trực tiếp. Đã tải ảnh về máy.');
+            showToast('Trình duyệt chưa hỗ trợ chia sẻ trực tiếp. Đã lưu ảnh về máy.');
             downloadImage();
         }
     } catch (err) {
         if (err.name !== 'AbortError') {
-            showToast('Không thể chia sẻ. Đã tải ảnh về máy.');
+            showToast('Không thể chia sẻ. Đã lưu ảnh về máy.');
             downloadImage();
         }
     }
@@ -1808,8 +1964,9 @@ function getFinalImageDataUrl() {
         ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1;
         ctx.translate(el.x, el.y);
         ctx.rotate((el.rotation || 0) * Math.PI / 180);
-        ctx.textAlign = 'center';
+        ctx.textAlign = el.align || 'center';
         ctx.textBaseline = 'middle';
+        
         if (el.type === 'sticker') {
             ctx.font = `${el.fontSize}px sans-serif`;
             ctx.fillText(el.content, 0, 0);
@@ -1828,10 +1985,15 @@ function getFinalImageDataUrl() {
     return dlCanvas.toDataURL('image/png', 1.0);
 }
 
-// ================= QR CODE =================
-function openQRModal() {
+// ================= REAL QR GENERATION VIA FREE HOSTING API =================
+async function openQRModal() {
     const modal = document.getElementById('qrModal');
+    const qrLoading = document.getElementById('qrLoading');
+    const qrContainer = document.getElementById('qrContainer');
+    
     modal.classList.remove('hidden');
+    qrLoading.classList.remove('hidden');
+    qrContainer.classList.add('hidden');
     
     try {
         if (typeof QRCode === 'undefined') {
@@ -1841,21 +2003,52 @@ function openQRModal() {
         }
         
         const dataUrl = getFinalImageDataUrl();
-        // dataURL too long for QR, use a small placeholder message
-        if (dataUrl.length > 2000) {
+        const blob = await (await fetch(dataUrl)).blob();
+        
+        const formData = new FormData();
+        formData.append('file', blob, 'photobooth-pro.png');
+        
+        // Upload file to free tmpfiles.org server in the background
+        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error('CORS / Network upload error');
+        
+        const json = await response.json();
+        if (json.status === 'success' && json.data && json.data.url) {
+            // Convert page URL to direct download URL (tmpfiles.org/XXXX -> tmpfiles.org/dl/XXXX)
+            const dlUrl = json.data.url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
+            
             const qrCanvas = document.getElementById('qrCanvas');
-            QRCode.toCanvas(qrCanvas, 'Photobooth Pro - Dùng nút Tải ảnh để lưu ảnh về máy', {
-                width: 200,
-                color: { dark: '#000', light: '#fff' }
+            QRCode.toCanvas(qrCanvas, dlUrl, {
+                width: 220,
+                margin: 2,
+                color: {
+                    dark: '#0f0f1a',
+                    light: '#ffffff'
+                }
             });
-            showToast('Ảnh quá lớn để tạo QR trực tiếp. Vui lòng dùng nút tải ảnh.');
+            
+            qrLoading.classList.add('hidden');
+            qrContainer.classList.remove('hidden');
+            showToast('Tạo mã QR tải ảnh thành công! 📱');
         } else {
-            const qrCanvas = document.getElementById('qrCanvas');
-            QRCode.toCanvas(qrCanvas, dataUrl, { width: 200 });
+            throw new Error('Invalid format returned');
         }
     } catch (err) {
-        showToast('Không thể tạo QR lúc này.');
-        modal.classList.add('hidden');
+        console.error("QR Code Upload Error:", err);
+        qrLoading.classList.add('hidden');
+        qrContainer.classList.remove('hidden');
+        
+        // Fallback: Generate local QR pointing to a placeholder text warning of excessive size
+        const qrCanvas = document.getElementById('qrCanvas');
+        QRCode.toCanvas(qrCanvas, 'Ảnh quá lớn để tạo QR trực tiếp. Vui lòng dùng nút tải ảnh.', {
+            width: 220,
+            margin: 2
+        });
+        showToast('Không thể upload ảnh lên cloud. Vui lòng sử dụng Tải ảnh PNG!');
     }
 }
 
@@ -1863,7 +2056,26 @@ function closeQRModal() {
     document.getElementById('qrModal').classList.add('hidden');
 }
 
-// ================= GIF / BOOMERANG =================
+// ================= DYNAMIC GIF / BOOMERANG EXPORTS =================
+function setGifDelay(ms, btn) {
+    gifDelay = ms;
+    document.getElementById('gifSpeedLabel').textContent = ms + 'ms';
+    
+    document.querySelectorAll('.speed-pill').forEach(p => {
+        p.classList.remove('active');
+        p.style.background = 'rgba(255, 255, 255, 0.05)';
+        p.style.color = 'var(--text-sub)';
+        p.style.border = '1px solid var(--card-border)';
+        p.style.boxShadow = 'none';
+    });
+    
+    btn.classList.add('active');
+    btn.style.background = 'var(--btn-gradient)';
+    btn.style.color = 'white';
+    btn.style.border = 'none';
+    btn.style.boxShadow = '0 0 10px rgba(181, 108, 255, 0.4)';
+}
+
 async function createGif() {
     if (!selectedImages || selectedImages.length < 2) {
         showToast('Cần ít nhất 2 ảnh để tạo GIF.');
@@ -1877,13 +2089,17 @@ async function createGif() {
     
     const gifModal = document.getElementById('gifModal');
     gifModal.classList.remove('hidden');
-    document.getElementById('gifStatus').textContent = 'Đang tạo GIF...';
+    document.getElementById('gifStatus').textContent = 'Đang ghép frame GIF...';
     
     try {
+        // Fetch worker logic locally to bypass cross-origin browser policies
+        const workerBlob = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js').then(r => r.blob());
+        const workerURL = URL.createObjectURL(workerBlob);
+        
         const gif = new GIF({
             workers: 2,
             quality: 10,
-            workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
+            workerScript: workerURL
         });
         
         for (const src of selectedImages) {
@@ -1892,14 +2108,37 @@ async function createGif() {
             await new Promise(r => img.onload = r);
             
             const c = document.createElement('canvas');
-            c.width = 400; c.height = 533;
+            c.width = 450; 
+            c.height = 600;
             const cx = c.getContext('2d');
+            
+            // Apply current filters and color adjustments to frames
+            let cssFilter = `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%) blur(${adjustments.blur}px)`;
+            switch (currentFilter) {
+                case 'beauty': cssFilter += ' blur(0.5px) brightness(110%) saturate(110%)'; break;
+                case 'vintage': cssFilter += ' sepia(50%) contrast(120%) brightness(90%) hue-rotate(-10deg)'; break;
+                case 'film': cssFilter += ' contrast(130%) saturate(80%) sepia(20%)'; break;
+                case 'bw': cssFilter += ' grayscale(100%) contrast(110%)'; break;
+                case 'warm': cssFilter += ' sepia(30%) saturate(120%) hue-rotate(-10deg)'; break;
+                case 'cool': cssFilter += ' hue-rotate(180deg) saturate(90%) brightness(105%)'; break;
+                case 'pink': cssFilter += ' hue-rotate(300deg) saturate(120%) brightness(110%)'; break;
+                case 'sepia': cssFilter += ' sepia(100%)'; break;
+                case 'contrast': cssFilter += ' contrast(150%) saturate(110%)'; break;
+                case 'dreamy': cssFilter += ' blur(1px) brightness(120%) saturate(110%) contrast(90%)'; break;
+            }
+            cx.filter = cssFilter;
+            
             const ratio = img.width / img.height;
             let dw, dh, dx, dy;
-            if (ratio > c.width / c.height) { dh = c.height; dw = dh * ratio; dx = (c.width - dw) / 2; dy = 0; }
-            else { dw = c.width; dh = dw / ratio; dx = 0; dy = (c.height - dh) / 2; }
+            if (ratio > c.width / c.height) { 
+                dh = c.height; dw = dh * ratio; dx = (c.width - dw) / 2; dy = 0; 
+            } else { 
+                dw = c.width; dh = dw / ratio; dx = 0; dy = (c.height - dh) / 2; 
+            }
             cx.drawImage(img, dx, dy, dw, dh);
-            gif.addFrame(c, { delay: 400 });
+            cx.filter = 'none';
+            
+            gif.addFrame(c, { delay: gifDelay });
         }
         
         gif.on('finished', function(blob) {
@@ -1913,6 +2152,7 @@ async function createGif() {
         
         gif.render();
     } catch (err) {
+        console.error(err);
         gifModal.classList.add('hidden');
         showToast('Không thể tạo GIF lúc này, vui lòng thử lại.');
     }
@@ -1931,18 +2171,22 @@ async function createBoomerang() {
     
     const gifModal = document.getElementById('gifModal');
     gifModal.classList.remove('hidden');
-    document.getElementById('gifStatus').textContent = 'Đang tạo Boomerang...';
+    document.getElementById('gifStatus').textContent = 'Đang ghép frame Boomerang...';
     
     try {
-        // Create boomerang sequence: 1,2,3,4,3,2
+        // Create boomerang loop sequence: 1 -> 2 -> 3 -> 4 -> 3 -> 2
         const boomerangSequence = [...selectedImages];
         for (let i = selectedImages.length - 2; i > 0; i--) {
             boomerangSequence.push(selectedImages[i]);
         }
         
+        const workerBlob = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js').then(r => r.blob());
+        const workerURL = URL.createObjectURL(workerBlob);
+        
         const gif = new GIF({
-            workers: 2, quality: 10,
-            workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
+            workers: 2, 
+            quality: 10,
+            workerScript: workerURL
         });
         
         for (const src of boomerangSequence) {
@@ -1951,14 +2195,37 @@ async function createBoomerang() {
             await new Promise(r => img.onload = r);
             
             const c = document.createElement('canvas');
-            c.width = 400; c.height = 533;
+            c.width = 450; 
+            c.height = 600;
             const cx = c.getContext('2d');
+            
+            let cssFilter = `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%) blur(${adjustments.blur}px)`;
+            switch (currentFilter) {
+                case 'beauty': cssFilter += ' blur(0.5px) brightness(110%) saturate(110%)'; break;
+                case 'vintage': cssFilter += ' sepia(50%) contrast(120%) brightness(90%) hue-rotate(-10deg)'; break;
+                case 'film': cssFilter += ' contrast(130%) saturate(80%) sepia(20%)'; break;
+                case 'bw': cssFilter += ' grayscale(100%) contrast(110%)'; break;
+                case 'warm': cssFilter += ' sepia(30%) saturate(120%) hue-rotate(-10deg)'; break;
+                case 'cool': cssFilter += ' hue-rotate(180deg) saturate(90%) brightness(105%)'; break;
+                case 'pink': cssFilter += ' hue-rotate(300deg) saturate(120%) brightness(110%)'; break;
+                case 'sepia': cssFilter += ' sepia(100%)'; break;
+                case 'contrast': cssFilter += ' contrast(150%) saturate(110%)'; break;
+                case 'dreamy': cssFilter += ' blur(1px) brightness(120%) saturate(110%) contrast(90%)'; break;
+            }
+            cx.filter = cssFilter;
+            
             const ratio = img.width / img.height;
             let dw, dh, dx, dy;
-            if (ratio > c.width / c.height) { dh = c.height; dw = dh * ratio; dx = (c.width - dw) / 2; dy = 0; }
-            else { dw = c.width; dh = dw / ratio; dx = 0; dy = (c.height - dh) / 2; }
+            if (ratio > c.width / c.height) { 
+                dh = c.height; dw = dh * ratio; dx = (c.width - dw) / 2; dy = 0; 
+            } else { 
+                dw = c.width; dh = dw / ratio; dx = 0; dy = (c.height - dh) / 2; 
+            }
             cx.drawImage(img, dx, dy, dw, dh);
-            gif.addFrame(c, { delay: 250 });
+            cx.filter = 'none';
+            
+            // Boomerang speed defaults to a bit faster: gifDelay * 0.7
+            gif.addFrame(c, { delay: Math.round(gifDelay * 0.7) });
         }
         
         gif.on('finished', function(blob) {
@@ -1972,6 +2239,7 @@ async function createBoomerang() {
         
         gif.render();
     } catch (err) {
+        console.error(err);
         gifModal.classList.add('hidden');
         showToast('Không thể tạo Boomerang lúc này, vui lòng thử lại.');
     }
@@ -1993,5 +2261,5 @@ function showToast(msg) {
     }, 3000);
 }
 
-// Init app
+// Bind load listeners
 window.addEventListener('DOMContentLoaded', init);
