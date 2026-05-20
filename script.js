@@ -9,8 +9,10 @@ let cameraStream = null;
 let currentFacingMode = 'user';
 let isCapturing = false;
 let currentZoom = 1;
-let isPremiumUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
+let isPremiumUnlocked = false;
+try { isPremiumUnlocked = localStorage.getItem('premiumUnlocked') === 'true'; } catch(e) {}
 let isMirrorMode = false;
+let actionType = null;
 
 // Camera Filters & Beauty Settings
 const CAMERA_FILTERS = {
@@ -69,7 +71,8 @@ let activeCameraFilter = 'original';
 let faceDetector = null;
 let isFaceAligned = false;
 let autoCaptureEnabled = false;
-let alignTime = 0;
+let faceAlignedSince = 0;
+let isAutoCaptureWaiting = false;
 let faceDetectionRAF = null;
 
 // Editor State
@@ -313,7 +316,7 @@ function selectThemeLayout(layoutId) {
 
 function unlockPremium() {
     isPremiumUnlocked = true;
-    localStorage.setItem('premiumUnlocked', 'true');
+    try { localStorage.setItem('premiumUnlocked', 'true'); } catch(e) {}
     document.getElementById('supportModal').classList.add('hidden');
     showToast('Cảm ơn bạn đã ủng hộ! Premium đã được mở khóa 💖');
     
@@ -411,6 +414,13 @@ function selectCameraFilter(id) {
 
 function toggleAutoCapture() {
     autoCaptureEnabled = document.getElementById('autoCaptureToggle').checked;
+    if (!autoCaptureEnabled) {
+        faceAlignedSince = 0;
+        isAutoCaptureWaiting = false;
+    }
+    // Sync mobile button
+    const btnMobileAutoCapture = document.getElementById('btnMobileAutoCapture');
+    if (btnMobileAutoCapture) btnMobileAutoCapture.classList.toggle('active', autoCaptureEnabled);
 }
 
 function toggleMirrorMode() {
@@ -592,7 +602,7 @@ function handleCustomBgUpload(event) {
 }
 
 // ================= TIMER SELECTION =================
-let captureTimer = 3;
+let captureTimer = 0;
 let countdownInterval = null;
 
 function setTimer(seconds) {
@@ -774,17 +784,19 @@ function updateFaceGuide(detections) {
         oval.classList.add('aligned');
         hint.classList.add('aligned');
         
-        if (autoCaptureEnabled && !isCapturing && capturedImages.length < 6) {
-            if (alignTime === 0) alignTime = Date.now();
-            else if (Date.now() - alignTime > 1500) {
+        if (autoCaptureEnabled && !isCapturing && !isAutoCaptureWaiting && capturedImages.length < 6) {
+            if (faceAlignedSince === 0) {
+                faceAlignedSince = Date.now();
+            } else if (Date.now() - faceAlignedSince > 1500) {
+                isAutoCaptureWaiting = true;
+                faceAlignedSince = 0;
                 startCountdown();
-                alignTime = 0;
             }
         }
     } else {
         oval.classList.remove('aligned');
         hint.classList.remove('aligned');
-        alignTime = 0;
+        faceAlignedSince = 0;
     }
 }
 
@@ -995,7 +1007,7 @@ function startCountdown() {
     }, 1000);
 }
 
-function drawVideoCoverToCanvas(video, canvas, isMirror = true) {
+function drawVideoCoverToCanvas(video, canvas, isMirror = false) {
     const ctx = canvas.getContext('2d');
     const srcW = video.videoWidth || video.width;
     const srcH = video.videoHeight || video.height;
@@ -1077,9 +1089,9 @@ function capturePhoto() {
     captureCanvas.width = 900;
     captureCanvas.height = 1200;
     
-    const isMirror = isMirrorMode;
+    const shouldMirror = isMirrorMode;
     const sourceElement = currentVirtualBackground !== 'none' ? document.getElementById('bgCanvas') : cameraVideo;
-    drawVideoCoverToCanvas(sourceElement, captureCanvas, isMirror);
+    drawVideoCoverToCanvas(sourceElement, captureCanvas, shouldMirror);
     
     const dataUrl = captureCanvas.toDataURL('image/jpeg', 0.9);
     capturedImages.push(dataUrl);
@@ -1093,20 +1105,15 @@ function capturePhoto() {
         }, 1000);
     } else {
         isCapturing = false;
+        isAutoCaptureWaiting = false;
         
         const pcCaptureBtn = document.getElementById('btnCapture');
         const mobileCaptureBtn = document.getElementById('mobileCaptureBtn');
         if (pcCaptureBtn) pcCaptureBtn.disabled = false;
         if (mobileCaptureBtn) mobileCaptureBtn.disabled = false;
         
-        // Auto capture delay to adjust pose: only on PC, or if autoCaptureEnabled is true
-        if (window.innerWidth > 767 || autoCaptureEnabled) {
-            setTimeout(() => {
-                if (cameraStream && screens.camera.classList.contains('active') && !isCapturing) {
-                    startCountdown();
-                }
-            }, 2200);
-        }
+        // Reset face alignment timer so auto capture requires re-alignment
+        faceAlignedSince = 0;
     }
 }
 
@@ -1122,8 +1129,12 @@ function resetShoot() {
     }
     
     autoCaptureEnabled = false;
+    isAutoCaptureWaiting = false;
+    faceAlignedSince = 0;
     const autoToggle = document.getElementById('autoCaptureToggle');
     if (autoToggle) autoToggle.checked = false;
+    const btnMobileAutoCapture = document.getElementById('btnMobileAutoCapture');
+    if (btnMobileAutoCapture) btnMobileAutoCapture.classList.remove('active');
     
     updateShotCounter();
     if (screens.editor.classList.contains('active') || screens.selection.classList.contains('active')) {
@@ -1747,14 +1758,69 @@ function drawOverlay(ctx, w, h, type) {
 }
 
 // ================= DRAG & DROP ELEMENTS =================
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+function getElementAtPosition(x, y) {
+  const ctx = finalCanvas.getContext("2d");
+
+  for (let i = draggableElements.length - 1; i >= 0; i--) {
+    const el = draggableElements[i];
+
+    if (el.type === "sticker") {
+      const hitSize = (el.fontSize || 60) * 1.4;
+
+      if (
+        x >= el.x - hitSize / 2 &&
+        x <= el.x + hitSize / 2 &&
+        y >= el.y - hitSize / 2 &&
+        y <= el.y + hitSize / 2
+      ) {
+        return i;
+      }
+    }
+
+    if (el.type === "text") {
+      ctx.save();
+      const italic = el.italic ? "italic " : "";
+      const weight = el.weight || "700";
+      ctx.font = `${italic}${weight} ${el.fontSize}px "${el.font}", sans-serif`;
+      const metrics = ctx.measureText(el.content || "");
+      ctx.restore();
+
+      const textWidth = metrics.width;
+      const textHeight = el.fontSize;
+      const padding = 28;
+
+      let alignOffset = 0;
+      if (el.align === 'left') alignOffset = textWidth / 2;
+      if (el.align === 'right') alignOffset = -textWidth / 2;
+      
+      const boxLeft = el.x - textWidth / 2 + alignOffset;
+      const boxRight = el.x + textWidth / 2 + alignOffset;
+      const boxTop = el.y - textHeight / 2;
+      const boxBottom = el.y + textHeight / 2;
+
+      if (
+        x >= boxLeft - padding &&
+        x <= boxRight + padding &&
+        y >= boxTop - padding &&
+        y <= boxBottom + padding
+      ) {
+        return i;
+      }
+    }
+  }
+
+  return -1;
+}
+
 function setupInteractiveLayer() {
-    interactiveLayer.addEventListener('mousedown', handleDragStart);
-    interactiveLayer.addEventListener('mousemove', handleDragMove);
-    window.addEventListener('mouseup', handleDragEnd);
-    
-    interactiveLayer.addEventListener('touchstart', handleDragStart, {passive: false});
-    interactiveLayer.addEventListener('touchmove', handleDragMove, {passive: false});
-    window.addEventListener('touchend', handleDragEnd);
+    interactiveLayer.addEventListener('pointerdown', handleDragStart);
+    finalCanvas.addEventListener('pointerdown', handleDragStart);
+    window.addEventListener('pointermove', handleDragMove);
+    window.addEventListener('pointerup', handleDragEnd);
+    window.addEventListener('pointercancel', handleDragEnd);
 }
 
 function renderInteractiveElements() {
@@ -1768,6 +1834,9 @@ function renderInteractiveElements() {
         div.style.left = `${el.x}px`;
         div.style.top = `${el.y}px`;
         div.style.transform = `translate(-50%, -50%) rotate(${el.rotation}deg)`;
+        
+        // Remove pointer events from the visible div since canvas hit detection handles interaction
+        div.style.pointerEvents = 'none';
         
         if (el.type === 'sticker') {
             div.style.fontSize = `${el.fontSize}px`;
@@ -1792,6 +1861,8 @@ function renderInteractiveElements() {
         
         const handle = document.createElement('div');
         handle.className = 'resize-handle';
+        // Keep pointer events for the resize handle
+        handle.style.pointerEvents = 'auto';
         div.appendChild(handle);
         
         interactiveLayer.appendChild(div);
@@ -1849,14 +1920,16 @@ function deleteSelectedElement() {
     }
 }
 
-// Drag & Resize execution
-let actionType = null;
-let initialDist = 0;
-let initialSize = 0;
+function centerSelectedElement() {
+    if (selectedElementIndex === -1) return;
+    const el = draggableElements[selectedElementIndex];
+    el.x = interactiveLayer.offsetWidth / 2;
+    el.y = interactiveLayer.offsetHeight / 2;
+    renderInteractiveElements();
+}
 
 function handleDragStart(e) {
     const target = e.target;
-    const draggable = target.closest('.draggable-element');
     
     if (target.classList.contains('resize-handle')) {
         e.preventDefault();
@@ -1864,24 +1937,40 @@ function handleDragStart(e) {
         const elDiv = target.closest('.draggable-element');
         selectedElementIndex = parseInt(elDiv.dataset.index);
         
-        const evt = e.touches ? e.touches[0] : e;
-        dragStartX = evt.clientX;
-        dragStartY = evt.clientY;
-        initialSize = draggableElements[selectedElementIndex].fontSize;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
         
         selectElement(selectedElementIndex);
         return;
     }
     
-    if (draggable) {
+    const rect = interactiveLayer.getBoundingClientRect();
+    const scaleX = interactiveLayer.offsetWidth / rect.width;
+    const scaleY = interactiveLayer.offsetHeight / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    const elementIndex = getElementAtPosition(x, y);
+    
+    if (elementIndex !== -1) {
         e.preventDefault();
         actionType = 'drag';
-        selectedElementIndex = parseInt(draggable.dataset.index);
+        selectedElementIndex = elementIndex;
         isDragging = true;
         
-        const evt = e.touches ? e.touches[0] : e;
-        dragStartX = evt.clientX;
-        dragStartY = evt.clientY;
+        const el = draggableElements[selectedElementIndex];
+        dragOffsetX = x - el.x;
+        dragOffsetY = y - el.y;
+        
+        try {
+            interactiveLayer.setPointerCapture(e.pointerId);
+        } catch (err) {}
+        
+        document.body.classList.add("dragging-canvas");
+        
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
         
         selectElement(selectedElementIndex);
     } else {
@@ -1893,31 +1982,46 @@ function handleDragMove(e) {
     if (selectedElementIndex === -1 || !actionType) return;
     
     e.preventDefault();
-    const evt = e.touches ? e.touches[0] : e;
     
-    const deltaX = evt.clientX - dragStartX;
-    const deltaY = evt.clientY - dragStartY;
-    
-    const scale = interactiveLayer.getBoundingClientRect().width / finalCanvas.width;
     const el = draggableElements[selectedElementIndex];
+    const rect = interactiveLayer.getBoundingClientRect();
     
     if (actionType === 'drag') {
-        el.x += deltaX / scale;
-        el.y += deltaY / scale;
-        dragStartX = evt.clientX;
-        dragStartY = evt.clientY;
+        const scaleX = interactiveLayer.offsetWidth / rect.width;
+        const scaleY = interactiveLayer.offsetHeight / rect.height;
+        
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+        
+        el.x = x - dragOffsetX;
+        el.y = y - dragOffsetY;
+        
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
     } else if (actionType === 'resize') {
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+        const scale = interactiveLayer.getBoundingClientRect().width / finalCanvas.width;
+        
         const sign = (deltaX > 0 || deltaY > 0) ? 1 : (deltaX < 0 && deltaY < 0 ? -1 : (deltaX - deltaY > 0 ? 1 : -1));
         const dist = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
         el.fontSize = Math.max(10, el.fontSize + (dist/scale) * sign * 0.5);
-        dragStartX = evt.clientX;
-        dragStartY = evt.clientY;
+        
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
     }
     
     renderInteractiveElements();
 }
 
 function handleDragEnd(e) {
+    if (isDragging || actionType) {
+        try {
+            if (e.pointerId) interactiveLayer.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+        document.body.classList.remove("dragging-canvas");
+    }
+    
     isDragging = false;
     actionType = null;
 }
@@ -2401,6 +2505,23 @@ function toggleMobileMirrorMode() {
     
     applyVideoTransform();
     showToast(isMirrorMode ? 'Đã bật chế độ lật gương ⇄' : 'Đã tắt chế độ lật gương ⇄');
+}
+
+function toggleMobileAutoCapture() {
+    autoCaptureEnabled = !autoCaptureEnabled;
+    const btnMobileAutoCapture = document.getElementById('btnMobileAutoCapture');
+    if (btnMobileAutoCapture) {
+        btnMobileAutoCapture.classList.toggle('active', autoCaptureEnabled);
+    }
+    const pcToggle = document.getElementById('autoCaptureToggle');
+    if (pcToggle) pcToggle.checked = autoCaptureEnabled;
+    
+    if (!autoCaptureEnabled) {
+        faceAlignedSince = 0;
+        isAutoCaptureWaiting = false;
+    }
+    
+    showToast(autoCaptureEnabled ? "Auto Capture đã bật ⚡" : "Auto Capture đã tắt");
 }
 
 function selectMobileBg(boxEl) {

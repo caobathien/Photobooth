@@ -271,6 +271,7 @@
                     <button class="live-tool-btn" id="btnMobileTimer" onclick="toggleMobileTimerDrawer()"><span style="font-size: 18px;">⏱</span></button>
                     <button class="live-tool-btn" id="btnMobileBg" onclick="toggleMobileBgDrawer()"><span style="font-size: 18px;">🖼</span></button>
                     <button class="live-tool-btn" id="btnMobileMirror" onclick="toggleMobileMirrorMode()"><span style="font-size: 18px;">⇄</span></button>
+                    <button class="live-tool-btn" id="btnMobileAutoCapture" title="Auto Capture" onclick="toggleMobileAutoCapture()"><span style="font-size: 18px;">⚡</span></button>
                 </div>
             </div>
 
@@ -442,8 +443,8 @@
                 <div class="camera-toggles">
                     <div class="timer-pills">
                         <i class="ph ph-timer"></i>
-                        <button class="timer-pill" onclick="setTimer(0)" id="btnTimer0">Off</button>
-                        <button class="timer-pill active" onclick="setTimer(3)" id="btnTimer3">3s</button>
+                        <button class="timer-pill active" onclick="setTimer(0)" id="btnTimer0">Off</button>
+                        <button class="timer-pill" onclick="setTimer(3)" id="btnTimer3">3s</button>
                         <button class="timer-pill" onclick="setTimer(5)" id="btnTimer5">5s</button>
                         <button class="timer-pill" onclick="setTimer(10)" id="btnTimer10">10s</button>
                     </div>
@@ -698,6 +699,7 @@
                         </div>
                         
                         <div class="element-controls hidden" id="elementControls" style="margin-top: 1.5rem;">
+                            <button id="btnCenterSelected" class="btn-secondary" onclick="centerSelectedElement()" style="width:100%; margin-bottom: 10px; justify-content:center;"><i class="ph ph-arrows-in"></i> Đưa về giữa</button>
                             <button id="btnDeleteSelected" class="btn-icon danger" onclick="deleteSelectedElement()" style="width:100%; border:1px solid rgba(255,77,77,0.3); background:rgba(255,77,77,0.1); padding:10px; border-radius:10px; color:#ff4d4d; font-weight:600;"><i class="ph ph-trash"></i> Xóa chữ đang chọn</button>
                         </div>
                     </div>
