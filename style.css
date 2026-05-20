@@ -1643,6 +1643,31 @@ input:checked + .slider:before { transform: translateX(26px); }
     border-radius: 8px;
 }
 
+/* Canvas Dragging Mobile Setup */
+#finalCanvas, #interactiveLayer {
+    touch-action: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
+    cursor: grab;
+}
+
+#finalCanvas.dragging, #interactiveLayer.dragging {
+    cursor: grabbing;
+}
+
+.preview-shell,
+.editor-preview,
+.canvas-wrapper {
+    touch-action: none;
+}
+
+body.dragging-canvas {
+    overflow: hidden !important;
+    touch-action: none !important;
+    overscroll-behavior: none;
+}
+
 /* Make sure mobile bottom tabs are scrollable and styled well */
 @media (max-width: 600px) {
     .toolbar-tabs {

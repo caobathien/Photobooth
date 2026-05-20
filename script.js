@@ -1763,12 +1763,15 @@ let dragOffsetY = 0;
 
 function getElementAtPosition(x, y) {
   const ctx = finalCanvas.getContext("2d");
+  const isMobile = window.innerWidth <= 767;
 
   for (let i = draggableElements.length - 1; i >= 0; i--) {
     const el = draggableElements[i];
+    const extraHit = isMobile ? 34 : 16;
 
     if (el.type === "sticker") {
-      const hitSize = (el.fontSize || 60) * 1.4;
+      const size = el.fontSize || 64;
+      const hitSize = size + extraHit * 2;
 
       if (
         x >= el.x - hitSize / 2 &&
@@ -1781,16 +1784,18 @@ function getElementAtPosition(x, y) {
     }
 
     if (el.type === "text") {
-      ctx.save();
-      const italic = el.italic ? "italic " : "";
+      const size = el.fontSize || 48;
+      const font = el.font || "Arial";
       const weight = el.weight || "700";
-      ctx.font = `${italic}${weight} ${el.fontSize}px "${el.font}", sans-serif`;
+      const italic = el.italic ? "italic " : "";
+
+      ctx.save();
+      ctx.font = `${italic}${weight} ${size}px "${font}", sans-serif`;
       const metrics = ctx.measureText(el.content || "");
       ctx.restore();
 
       const textWidth = metrics.width;
-      const textHeight = el.fontSize;
-      const padding = 28;
+      const textHeight = size;
 
       let alignOffset = 0;
       if (el.align === 'left') alignOffset = textWidth / 2;
@@ -1802,10 +1807,10 @@ function getElementAtPosition(x, y) {
       const boxBottom = el.y + textHeight / 2;
 
       if (
-        x >= boxLeft - padding &&
-        x <= boxRight + padding &&
-        y >= boxTop - padding &&
-        y <= boxBottom + padding
+        x >= boxLeft - extraHit &&
+        x <= boxRight + extraHit &&
+        y >= boxTop - extraHit &&
+        y <= boxBottom + extraHit
       ) {
         return i;
       }
@@ -1815,12 +1820,14 @@ function getElementAtPosition(x, y) {
   return -1;
 }
 
+let activePointerId = null;
+
 function setupInteractiveLayer() {
-    interactiveLayer.addEventListener('pointerdown', handleDragStart);
-    finalCanvas.addEventListener('pointerdown', handleDragStart);
-    window.addEventListener('pointermove', handleDragMove);
-    window.addEventListener('pointerup', handleDragEnd);
-    window.addEventListener('pointercancel', handleDragEnd);
+    interactiveLayer.addEventListener('pointerdown', handleDragStart, { passive: false });
+    interactiveLayer.addEventListener('pointermove', handleDragMove, { passive: false });
+    interactiveLayer.addEventListener('pointerup', handleDragEnd, { passive: false });
+    interactiveLayer.addEventListener('pointercancel', handleDragEnd, { passive: false });
+    interactiveLayer.addEventListener('lostpointercapture', handleDragEnd, { passive: false });
 }
 
 function renderInteractiveElements() {
@@ -1933,12 +1940,16 @@ function handleDragStart(e) {
     
     if (target.classList.contains('resize-handle')) {
         e.preventDefault();
+        e.stopPropagation();
         actionType = 'resize';
         const elDiv = target.closest('.draggable-element');
         selectedElementIndex = parseInt(elDiv.dataset.index);
         
         dragStartX = e.clientX;
         dragStartY = e.clientY;
+        activePointerId = e.pointerId;
+        
+        try { interactiveLayer.setPointerCapture(e.pointerId); } catch(err) {}
         
         selectElement(selectedElementIndex);
         return;
@@ -1955,19 +1966,21 @@ function handleDragStart(e) {
     
     if (elementIndex !== -1) {
         e.preventDefault();
+        e.stopPropagation();
         actionType = 'drag';
         selectedElementIndex = elementIndex;
         isDragging = true;
+        activePointerId = e.pointerId;
         
         const el = draggableElements[selectedElementIndex];
         dragOffsetX = x - el.x;
         dragOffsetY = y - el.y;
         
-        try {
-            interactiveLayer.setPointerCapture(e.pointerId);
-        } catch (err) {}
+        try { interactiveLayer.setPointerCapture(e.pointerId); } catch (err) {}
         
         document.body.classList.add("dragging-canvas");
+        finalCanvas.classList.add("dragging");
+        interactiveLayer.classList.add("dragging");
         
         dragStartX = e.clientX;
         dragStartY = e.clientY;
@@ -1978,10 +1991,22 @@ function handleDragStart(e) {
     }
 }
 
+let needsRender = false;
+function requestRender() {
+    if (needsRender) return;
+    needsRender = true;
+    requestAnimationFrame(() => {
+        renderInteractiveElements();
+        needsRender = false;
+    });
+}
+
 function handleDragMove(e) {
     if (selectedElementIndex === -1 || !actionType) return;
+    if (activePointerId !== null && activePointerId !== e.pointerId) return;
     
     e.preventDefault();
+    e.stopPropagation();
     
     const el = draggableElements[selectedElementIndex];
     const rect = interactiveLayer.getBoundingClientRect();
@@ -1993,6 +2018,7 @@ function handleDragMove(e) {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
         
+        // NO clamping
         el.x = x - dragOffsetX;
         el.y = y - dragOffsetY;
         
@@ -2011,19 +2037,24 @@ function handleDragMove(e) {
         dragStartY = e.clientY;
     }
     
-    renderInteractiveElements();
+    requestRender();
 }
 
 function handleDragEnd(e) {
     if (isDragging || actionType) {
+        e.preventDefault();
+        e.stopPropagation();
         try {
-            if (e.pointerId) interactiveLayer.releasePointerCapture(e.pointerId);
+            if (activePointerId !== null) interactiveLayer.releasePointerCapture(activePointerId);
         } catch (err) {}
         document.body.classList.remove("dragging-canvas");
+        finalCanvas.classList.remove("dragging");
+        interactiveLayer.classList.remove("dragging");
     }
     
     isDragging = false;
     actionType = null;
+    activePointerId = null;
 }
 
 // ================= HIGH RES EXPORT =================
