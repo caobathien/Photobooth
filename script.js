@@ -1883,9 +1883,169 @@ function renderInteractiveElements() {
     }
 }
 
+function syncAllElementControls() {
+    const el = draggableElements[selectedElementIndex];
+    const panel = document.getElementById('selectedElementPanel');
+    if (!el) {
+        if(panel) panel.classList.add('hidden');
+        return;
+    }
+    
+    if(panel) {
+        panel.classList.remove('hidden');
+        document.getElementById('selectedElementType').textContent = el.type === 'text' ? 'Chữ' : (el.type === 'sticker' ? 'Sticker' : 'Ảnh');
+        
+        if (el.type === 'text') {
+            document.getElementById('textOnlyControls').classList.remove('hidden');
+        } else {
+            document.getElementById('textOnlyControls').classList.add('hidden');
+        }
+    }
+
+    const size = el.fontSize || 80;
+    document.querySelectorAll(".js-element-size-range").forEach(input => {
+        input.value = size;
+    });
+    document.querySelectorAll(".js-element-size-value").forEach(label => {
+        label.textContent = size;
+    });
+
+    const rotation = el.rotation || 0;
+    document.querySelectorAll(".js-element-rotate-range").forEach(input => {
+        input.value = rotation;
+    });
+    document.querySelectorAll(".js-element-rotate-value").forEach(label => {
+        label.textContent = rotation;
+    });
+
+    const opacity = el.opacity ?? 1;
+    document.querySelectorAll(".js-element-opacity-range").forEach(input => {
+        input.value = opacity;
+    });
+    document.querySelectorAll(".js-element-opacity-value").forEach(label => {
+        label.textContent = Math.round(opacity * 100);
+    });
+    
+    if (el.type === 'text') {
+        const color = el.color || '#ffffff';
+        document.querySelectorAll(".js-text-color-input").forEach(input => {
+            input.value = color;
+        });
+        
+        const font = el.font || 'Arial';
+        document.querySelectorAll(".js-font-select").forEach(select => {
+            select.value = font;
+        });
+    }
+}
+
+function updateSelectedElementSize(size) {
+    if (selectedElementIndex === -1) return;
+    draggableElements[selectedElementIndex].fontSize = Number(size);
+    
+    // Also update legacy PC controls if text
+    if (draggableElements[selectedElementIndex].type === 'text') {
+        const legacySize = document.getElementById('textSize');
+        if (legacySize) legacySize.value = size;
+        const legacyVal = document.getElementById('fontSizeVal');
+        if (legacyVal) legacyVal.textContent = size;
+    }
+    
+    requestRender();
+}
+
+function updateSelectedElementRotation(rotation) {
+    if (selectedElementIndex === -1) return;
+    draggableElements[selectedElementIndex].rotation = Number(rotation);
+    
+    if (draggableElements[selectedElementIndex].type === 'text') {
+        const legacyRot = document.getElementById('textRotation');
+        if (legacyRot) legacyRot.value = rotation;
+        const legacyVal = document.getElementById('rotationVal');
+        if (legacyVal) legacyVal.textContent = rotation;
+    }
+    
+    requestRender();
+}
+
+function updateSelectedElementOpacity(opacity) {
+    if (selectedElementIndex === -1) return;
+    draggableElements[selectedElementIndex].opacity = Number(opacity);
+    
+    if (draggableElements[selectedElementIndex].type === 'text') {
+        const legacyOp = document.getElementById('textOpacity');
+        if (legacyOp) legacyOp.value = Math.round(Number(opacity) * 100);
+        const legacyVal = document.getElementById('opacityVal');
+        if (legacyVal) legacyVal.textContent = Math.round(Number(opacity) * 100);
+    }
+    
+    requestRender();
+}
+
+function updateSelectedTextColor(color) {
+    if (selectedElementIndex === -1) return;
+    if (draggableElements[selectedElementIndex].type !== 'text') return;
+    draggableElements[selectedElementIndex].color = color;
+    
+    const legacyCol = document.getElementById('textColor');
+    if (legacyCol) legacyCol.value = color;
+    
+    requestRender();
+}
+
+function updateSelectedTextFont(font) {
+    if (selectedElementIndex === -1) return;
+    if (draggableElements[selectedElementIndex].type !== 'text') return;
+    draggableElements[selectedElementIndex].font = font;
+    
+    const legacyFont = document.getElementById('fontSelect');
+    if (legacyFont) legacyFont.value = font;
+    
+    requestRender();
+}
+
+// Bind events to the new unified inputs
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll(".js-element-size-range").forEach(range => {
+        range.addEventListener("input", event => {
+            updateSelectedElementSize(event.target.value);
+            syncAllElementControls();
+        });
+    });
+
+    document.querySelectorAll(".js-element-rotate-range").forEach(range => {
+        range.addEventListener("input", event => {
+            updateSelectedElementRotation(event.target.value);
+            syncAllElementControls();
+        });
+    });
+
+    document.querySelectorAll(".js-element-opacity-range").forEach(range => {
+        range.addEventListener("input", event => {
+            updateSelectedElementOpacity(event.target.value);
+            syncAllElementControls();
+        });
+    });
+    
+    document.querySelectorAll(".js-text-color-input").forEach(input => {
+        input.addEventListener("input", event => {
+            updateSelectedTextColor(event.target.value);
+            syncAllElementControls();
+        });
+    });
+    
+    document.querySelectorAll(".js-font-select").forEach(select => {
+        select.addEventListener("change", event => {
+            updateSelectedTextFont(event.target.value);
+            syncAllElementControls();
+        });
+    });
+});
+
 function selectElement(index) {
     selectedElementIndex = index;
     renderInteractiveElements();
+    syncAllElementControls();
     
     if (index > -1 && draggableElements[index].type === 'text') {
         const el = draggableElements[index];
@@ -1915,6 +2075,8 @@ function selectElement(index) {
         else if (align === 'right') document.getElementById('btnAlignRight').classList.add('active');
         
         switchTab('text');
+    } else if (index > -1 && draggableElements[index].type === 'sticker') {
+        switchTab('stickers');
     }
 }
 

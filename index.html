@@ -540,6 +540,53 @@
                         <button id="btnTabExport" class="tab-btn" onclick="switchTab('export')"><i class="ph ph-export"></i> Xuất ảnh</button>
                     </div>
 
+                    <!-- UNIFIED ELEMENT CONTROLS PANEL -->
+                    <div id="selectedElementPanel" class="tool-card selected-element-panel hidden" style="background: rgba(255,255,255,0.03); border:1px solid var(--card-border); padding: 1.2rem; border-radius:15px; margin-bottom: 1.5rem;">
+                        <h4 style="margin-top: 0;">Chỉnh đối tượng: <span id="selectedElementType" style="color: var(--active-color);"></span></h4>
+                        
+                        <div class="slider-group compact">
+                            <label>Kích thước: <span class="js-element-size-value">80</span></label>
+                            <input type="range" class="js-element-size-range" min="10" max="300" value="80">
+                        </div>
+                        
+                        <div class="slider-group compact">
+                            <label>Xoay: <span class="js-element-rotate-value">0</span>°</label>
+                            <input type="range" class="js-element-rotate-range" min="-180" max="180" value="0">
+                        </div>
+                        
+                        <div class="slider-group compact">
+                            <label>Độ trong suốt: <span class="js-element-opacity-value">100</span>%</label>
+                            <input type="range" class="js-element-opacity-range" min="0.1" max="1" step="0.05" value="1">
+                        </div>
+                        
+                        <div id="textOnlyControls" class="hidden">
+                            <div class="text-controls-row" style="margin-top: 10px;">
+                                <label style="display:flex; align-items:center; gap:10px; width:100%; font-size:14px;">Màu chữ:
+                                    <input type="color" class="js-text-color-input" value="#ffffff" style="flex:1;">
+                                </label>
+                            </div>
+                            <div class="text-controls-row" style="margin-top: 10px;">
+                                <label style="display:flex; align-items:center; gap:10px; width:100%; font-size:14px;">Font:
+                                    <select class="js-font-select" style="flex:1; background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1); padding:8px; border-radius:8px;">
+                                        <option value="Syne">Syne</option>
+                                        <option value="DM Sans">DM Sans</option>
+                                        <option value="Space Grotesk">Space Grotesk</option>
+                                        <option value="Playfair Display">Playfair Display</option>
+                                        <option value="Pacifico">Pacifico</option>
+                                        <option value="Bebas Neue">Bebas Neue</option>
+                                        <option value="Abril Fatface">Abril Fatface</option>
+                                        <option value="Arial">Arial</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="element-controls" style="margin-top: 1.5rem; display: flex; gap: 10px;">
+                            <button class="btn-secondary" onclick="centerSelectedElement()" style="flex: 1; justify-content:center;"><i class="ph ph-arrows-in"></i> Giữa</button>
+                            <button class="btn-icon danger" onclick="deleteSelectedElement()" style="flex: 1; border:1px solid rgba(255,77,77,0.3); background:rgba(255,77,77,0.1); border-radius:10px; color:#ff4d4d; font-weight:600; justify-content:center;"><i class="ph ph-trash"></i> Xóa</button>
+                        </div>
+                    </div>
+
                     <!-- FRAME TAB: Background colors & Overlays -->
                     <div class="tab-content" id="tab-frame" style="display: block;">
                         <h4>Màu khung nền</h4>
