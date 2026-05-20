@@ -233,7 +233,7 @@
                 <!-- Face Guide Overlay -->
                 <div id="faceGuideOverlay" class="face-guide-overlay hidden">
                     <div id="faceGuideOval" class="face-guide-oval"></div>
-                    <div id="faceHint" class="face-hint">Đang nhận diện...</div>
+                    <div id="faceHint" class="face-hint">Căn mặt vào giữa khung</div>
                 </div>
 
                 <div class="grid-overlay">
@@ -351,6 +351,14 @@
                 <button class="mobile-small-btn" id="mobileBackBtn" onclick="goBackToLayout()"><i class="ph ph-arrow-left"></i></button>
                 <button class="mobile-capture-btn" id="mobileCaptureBtn" onclick="handleMobileCapture()"></button>
                 <button class="mobile-small-btn" id="mobileSwitchCameraBtn" onclick="switchCamera()"><i class="ph ph-camera-rotate"></i></button>
+            </div>
+
+            <!-- New simple toolbar for mobile -->
+            <div class="mobile-simple-toolbar">
+                <button type="button" id="mobileFilterBtn" class="simple-tool-btn" onclick="toggleMobileFilterDrawer()">Filter</button>
+                <button type="button" id="mobileTimerBtn" class="simple-tool-btn" onclick="toggleMobileTimerDrawer()">Timer</button>
+                <button type="button" id="mobileMirrorBtn" class="simple-tool-btn">Mirror</button>
+                <button type="button" id="mobileAutoBtn" class="simple-tool-btn">Auto</button>
             </div>
 
             <div class="mobile-shot-info">

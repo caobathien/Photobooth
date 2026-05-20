@@ -419,7 +419,7 @@ function toggleAutoCapture() {
         isAutoCaptureWaiting = false;
     }
     // Sync mobile button
-    const btnMobileAutoCapture = document.getElementById('btnMobileAutoCapture');
+    const btnMobileAutoCapture = document.getElementById('mobileAutoBtn');
     if (btnMobileAutoCapture) btnMobileAutoCapture.classList.toggle('active', autoCaptureEnabled);
 }
 
@@ -1133,7 +1133,7 @@ function resetShoot() {
     faceAlignedSince = 0;
     const autoToggle = document.getElementById('autoCaptureToggle');
     if (autoToggle) autoToggle.checked = false;
-    const btnMobileAutoCapture = document.getElementById('btnMobileAutoCapture');
+    const btnMobileAutoCapture = document.getElementById('mobileAutoBtn');
     if (btnMobileAutoCapture) btnMobileAutoCapture.classList.remove('active');
     
     updateShotCounter();
@@ -2466,7 +2466,8 @@ function toggleMobileFilterDrawer() {
     closeAllMobileDrawers();
     if (!isActive) {
         drawer.classList.add('open');
-        document.getElementById('btnMobileFilter').classList.add('active');
+        const btn = document.getElementById('mobileFilterBtn');
+        if (btn) btn.classList.add('active');
     }
 }
 
@@ -2476,7 +2477,8 @@ function toggleMobileTimerDrawer() {
     closeAllMobileDrawers();
     if (!isActive) {
         drawer.classList.add('open');
-        document.getElementById('btnMobileTimer').classList.add('active');
+        const btn = document.getElementById('mobileTimerBtn');
+        if (btn) btn.classList.add('active');
     }
 }
 
@@ -2497,7 +2499,7 @@ function toggleMobileMirrorMode() {
     const mirrorToggle = document.getElementById('mirrorToggle');
     if (mirrorToggle) mirrorToggle.checked = isMirrorMode;
     
-    const mobBtn = document.getElementById('btnMobileMirror');
+    const mobBtn = document.getElementById('mobileMirrorBtn');
     if (mobBtn) {
         if (isMirrorMode) mobBtn.classList.add('active');
         else mobBtn.classList.remove('active');
@@ -2509,7 +2511,7 @@ function toggleMobileMirrorMode() {
 
 function toggleMobileAutoCapture() {
     autoCaptureEnabled = !autoCaptureEnabled;
-    const btnMobileAutoCapture = document.getElementById('btnMobileAutoCapture');
+    const btnMobileAutoCapture = document.getElementById('mobileAutoBtn');
     if (btnMobileAutoCapture) {
         btnMobileAutoCapture.classList.toggle('active', autoCaptureEnabled);
     }
@@ -2536,7 +2538,7 @@ function closeAllMobileDrawers() {
         if (el) el.classList.remove('open');
     });
     
-    const btns = ['btnMobileBeauty', 'btnMobileFilter', 'btnMobileTimer', 'btnMobileBg'];
+    const btns = ['btnMobileBeauty', 'mobileFilterBtn', 'mobileTimerBtn', 'btnMobileBg'];
     btns.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('active');
