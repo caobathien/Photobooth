@@ -132,6 +132,7 @@ let customBackgroundImage = null;
 function init() {
     renderStickers();
     setupInteractiveLayer();
+    setupTouchFallback();
     renderLiveFilters();
     initFaceDetection();
     preloadVirtualBackgrounds();
@@ -1223,6 +1224,11 @@ function confirmPhotoSelection() {
 function goToEditor() {
     switchScreen('editor');
     renderPhotobooth();
+    
+    // Re-setup pointer events after entering editor (in case DOM changed)
+    requestAnimationFrame(() => {
+        setupInteractiveLayer();
+    });
 }
 
 function switchTab(tabId) {
@@ -1767,7 +1773,7 @@ function getElementAtPosition(x, y) {
 
   for (let i = draggableElements.length - 1; i >= 0; i--) {
     const el = draggableElements[i];
-    const extraHit = isMobile ? 34 : 16;
+    const extraHit = isMobile ? 45 : 18;
 
     if (el.type === "sticker") {
       const size = el.fontSize || 64;
@@ -1821,8 +1827,16 @@ function getElementAtPosition(x, y) {
 }
 
 let activePointerId = null;
+let savedScrollY = 0;
 
 function setupInteractiveLayer() {
+    // Remove old listeners first to prevent duplicates
+    interactiveLayer.removeEventListener('pointerdown', handleDragStart);
+    interactiveLayer.removeEventListener('pointermove', handleDragMove);
+    interactiveLayer.removeEventListener('pointerup', handleDragEnd);
+    interactiveLayer.removeEventListener('pointercancel', handleDragEnd);
+    interactiveLayer.removeEventListener('lostpointercapture', handleDragEnd);
+    
     interactiveLayer.addEventListener('pointerdown', handleDragStart, { passive: false });
     interactiveLayer.addEventListener('pointermove', handleDragMove, { passive: false });
     interactiveLayer.addEventListener('pointerup', handleDragEnd, { passive: false });
@@ -2140,7 +2154,10 @@ function handleDragStart(e) {
         
         try { interactiveLayer.setPointerCapture(e.pointerId); } catch (err) {}
         
+        // Save scroll position before fixing body
+        savedScrollY = window.scrollY;
         document.body.classList.add("dragging-canvas");
+        document.body.style.top = `-${savedScrollY}px`;
         finalCanvas.classList.add("dragging");
         interactiveLayer.classList.add("dragging");
         
@@ -2180,7 +2197,7 @@ function handleDragMove(e) {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
         
-        // NO clamping
+        // NO clamping - allow dragging outside canvas
         el.x = x - dragOffsetX;
         el.y = y - dragOffsetY;
         
@@ -2209,7 +2226,12 @@ function handleDragEnd(e) {
         try {
             if (activePointerId !== null) interactiveLayer.releasePointerCapture(activePointerId);
         } catch (err) {}
+        
+        // Restore scroll position
         document.body.classList.remove("dragging-canvas");
+        document.body.style.top = '';
+        window.scrollTo(0, savedScrollY);
+        
         finalCanvas.classList.remove("dragging");
         interactiveLayer.classList.remove("dragging");
     }
@@ -2217,6 +2239,91 @@ function handleDragEnd(e) {
     isDragging = false;
     actionType = null;
     activePointerId = null;
+}
+
+// ================= TOUCH EVENT FALLBACK FOR MOBILE =================
+// Some older mobile browsers may not properly support pointer events
+// on absolutely-positioned overlay layers. This fallback ensures drag works.
+function setupTouchFallback() {
+    // Only add touch fallback if pointer events might not work properly
+    let pointerEventWorks = false;
+    
+    // Test if pointer events fired on first interaction
+    interactiveLayer.addEventListener('pointerdown', function onceTest() {
+        pointerEventWorks = true;
+        interactiveLayer.removeEventListener('pointerdown', onceTest);
+    }, { once: true });
+    
+    // Fallback: Also listen on finalCanvas for touch events
+    finalCanvas.addEventListener('touchstart', function(e) {
+        if (pointerEventWorks) return; // Pointer events work, skip touch fallback
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        if (!touch) return;
+        
+        const rect = interactiveLayer.getBoundingClientRect();
+        const scaleX = interactiveLayer.offsetWidth / rect.width;
+        const scaleY = interactiveLayer.offsetHeight / rect.height;
+        
+        const x = (touch.clientX - rect.left) * scaleX;
+        const y = (touch.clientY - rect.top) * scaleY;
+        
+        const elementIndex = getElementAtPosition(x, y);
+        
+        if (elementIndex !== -1) {
+            actionType = 'drag';
+            selectedElementIndex = elementIndex;
+            isDragging = true;
+            
+            const el = draggableElements[selectedElementIndex];
+            dragOffsetX = x - el.x;
+            dragOffsetY = y - el.y;
+            
+            savedScrollY = window.scrollY;
+            document.body.classList.add("dragging-canvas");
+            document.body.style.top = `-${savedScrollY}px`;
+            
+            selectElement(selectedElementIndex);
+        } else {
+            selectElement(-1);
+        }
+    }, { passive: false });
+    
+    finalCanvas.addEventListener('touchmove', function(e) {
+        if (pointerEventWorks) return;
+        if (selectedElementIndex === -1 || !actionType) return;
+        
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        if (!touch) return;
+        
+        const el = draggableElements[selectedElementIndex];
+        const rect = interactiveLayer.getBoundingClientRect();
+        const scaleX = interactiveLayer.offsetWidth / rect.width;
+        const scaleY = interactiveLayer.offsetHeight / rect.height;
+        
+        const x = (touch.clientX - rect.left) * scaleX;
+        const y = (touch.clientY - rect.top) * scaleY;
+        
+        el.x = x - dragOffsetX;
+        el.y = y - dragOffsetY;
+        
+        requestRender();
+    }, { passive: false });
+    
+    finalCanvas.addEventListener('touchend', function(e) {
+        if (pointerEventWorks) return;
+        if (!isDragging && !actionType) return;
+        
+        document.body.classList.remove("dragging-canvas");
+        document.body.style.top = '';
+        window.scrollTo(0, savedScrollY);
+        
+        isDragging = false;
+        actionType = null;
+    }, { passive: false });
 }
 
 // ================= HIGH RES EXPORT =================
