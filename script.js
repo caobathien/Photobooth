@@ -885,10 +885,30 @@ function adjustZoom(delta) {
 
 function applyVideoTransform() {
     if (!cameraVideo) return;
-    const transformStr = `scale(${isMirrorMode ? -currentZoom : currentZoom}, ${currentZoom})`;
-    cameraVideo.style.transform = transformStr;
     const bgCanvas = document.getElementById('bgCanvas');
-    if (bgCanvas) bgCanvas.style.transform = transformStr;
+
+    // Khi zoom < 1, tăng kích thước element lên (1/zoom)x rồi scale xuống
+    // => Video vẫn phủ đầy khung, nhưng hiển thị góc rộng hơn (ít crop)
+    // Khi zoom >= 1, giữ 100% và scale lên => zoom in bình thường
+    const sizePct = (1 / currentZoom) * 100;
+    const scaleX = isMirrorMode ? -currentZoom : currentZoom;
+
+    cameraVideo.style.width = sizePct + '%';
+    cameraVideo.style.height = sizePct + '%';
+    cameraVideo.style.objectFit = 'cover';
+    cameraVideo.style.position = 'absolute';
+    cameraVideo.style.left = '50%';
+    cameraVideo.style.top = '50%';
+    cameraVideo.style.transform = `translate(-50%, -50%) scale(${scaleX}, ${currentZoom})`;
+
+    if (bgCanvas) {
+        bgCanvas.style.width = sizePct + '%';
+        bgCanvas.style.height = sizePct + '%';
+        bgCanvas.style.position = 'absolute';
+        bgCanvas.style.left = '50%';
+        bgCanvas.style.top = '50%';
+        bgCanvas.style.transform = `translate(-50%, -50%) scale(${scaleX}, ${currentZoom})`;
+    }
 
     if (isMirrorMode) {
         cameraVideo.classList.add('mirror');
