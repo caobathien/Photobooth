@@ -803,7 +803,7 @@ button {
     display: flex;
     flex-direction: column;
     background: var(--bg-primary);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .top-bar-editor {
@@ -821,7 +821,7 @@ button {
     align-items: center;
     padding: 2rem;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #finalCanvas {
@@ -844,6 +844,7 @@ button {
     -webkit-user-select: none !important;
     -webkit-touch-callout: none !important;
     cursor: grab;
+    overflow: visible;
 }
 
 .draggable-element {

@@ -2358,6 +2358,12 @@ function downloadImage() {
     ctx.filter = 'none'; 
     
     // Draw Draggable text and stickers onto compiled high-res canvas
+    // Clip to canvas bounds so elements dragged outside are cropped
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, dlCanvas.width, dlCanvas.height);
+    ctx.clip();
+    
     draggableElements.forEach(el => {
         ctx.save();
         ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1;
@@ -2392,6 +2398,7 @@ function downloadImage() {
         
         ctx.restore();
     });
+    ctx.restore();
     
     const link = document.createElement('a');
     link.download = `photobooth-pro-${Date.now()}.png`;
@@ -2450,6 +2457,12 @@ function getFinalImageDataUrl() {
     ctx.drawImage(finalCanvas, 0, 0);
     ctx.filter = 'none';
     
+    // Clip to canvas bounds so elements dragged outside are cropped
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, dlCanvas.width, dlCanvas.height);
+    ctx.clip();
+    
     draggableElements.forEach(el => {
         ctx.save();
         ctx.globalAlpha = el.opacity !== undefined ? el.opacity : 1;
@@ -2472,6 +2485,7 @@ function getFinalImageDataUrl() {
         }
         ctx.restore();
     });
+    ctx.restore();
     
     return dlCanvas.toDataURL('image/png', 1.0);
 }
