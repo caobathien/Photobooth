@@ -853,6 +853,7 @@ button {
     cursor: grab;
     user-select: none;
     transform-origin: center;
+    white-space: nowrap;
 }
 .draggable-element:active {
     cursor: grabbing;
