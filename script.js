@@ -1600,6 +1600,7 @@ async function renderPhotobooth() {
     // 1. Draw Background Frame
     // Luôn ưu tiên dùng frameBg (do user chọn hoặc lấy mặc định từ theme)
     const bgToUse = frameBg;
+    let bgStyle = bgToUse;
     
     if (bgToUse.startsWith('linear-gradient')) {
         const gradient = ctx.createLinearGradient(0, 0, width, height);
@@ -1611,9 +1612,11 @@ async function renderPhotobooth() {
             gradient.addColorStop(1, '#ff5fb7');
         }
         ctx.fillStyle = gradient;
+        bgStyle = gradient;
         ctx.fillRect(0, 0, width, height);
     } else {
         ctx.fillStyle = bgToUse;
+        bgStyle = bgToUse;
         ctx.fillRect(0, 0, width, height);
     }
 
@@ -1635,10 +1638,10 @@ async function renderPhotobooth() {
         img.src = selectedImages[i];
         await new Promise(r => img.onload = r);
         
-        // Border rendering
-        if (selectedTheme && selectedTheme.borderColor && selectedTheme.id !== 'magazine-cover') {
+        // Border rendering: theo yêu cầu, viền phải cùng màu với màu nền
+        if (selectedTheme && selectedTheme.id !== 'magazine-cover') {
             ctx.save();
-            ctx.strokeStyle = selectedTheme.borderColor;
+            ctx.strokeStyle = bgStyle;
             ctx.lineWidth = 4;
             ctx.beginPath();
             ctx.roundRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4, selectedLayout === 'polaroid' ? 6 : 14);
