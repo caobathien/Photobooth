@@ -1761,7 +1761,7 @@ body.dragging-canvas {
         border-radius: 24px !important;
         overflow: hidden !important;
         position: relative !important;
-        background: #000 !important;
+        background: #000;
         border: 1px solid rgba(255,255,255,0.16) !important;
         box-shadow: 0 18px 60px rgba(181,108,255,0.25) !important;
     }

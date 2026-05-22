@@ -337,6 +337,10 @@ function goToCamera() {
     switchScreen('camera');
     updateShotCounter();
     
+    // Đặt màu nền khởi tạo
+    const selfieFrame = document.querySelector('.selfie-frame');
+    if (selfieFrame) selfieFrame.style.background = frameBg;
+
     // Auto start camera on mobile
     if (window.innerWidth <= 767) {
         startCamera();
@@ -1443,6 +1447,12 @@ function quickAddText(textStr) {
 function setFrameBg(bg) {
     frameBg = bg;
     renderPhotobooth();
+    
+    // Cập nhật luôn màu nền của khung camera trực tiếp (selfie-frame)
+    const selfieFrame = document.querySelector('.selfie-frame');
+    if (selfieFrame) {
+        selfieFrame.style.background = bg;
+    }
 }
 
 function applyFilter(filter) {
