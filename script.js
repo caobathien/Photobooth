@@ -887,27 +887,37 @@ function applyVideoTransform() {
     if (!cameraVideo) return;
     const bgCanvas = document.getElementById('bgCanvas');
 
-    // Khi zoom < 1, tăng kích thước element lên (1/zoom)x rồi scale xuống
-    // => Video vẫn phủ đầy khung, nhưng hiển thị góc rộng hơn (ít crop)
-    // Khi zoom >= 1, giữ 100% và scale lên => zoom in bình thường
-    const sizePct = (1 / currentZoom) * 100;
-    const scaleX = isMirrorMode ? -currentZoom : currentZoom;
+    // Đặt lại kích thước gốc 100% cho element
+    cameraVideo.style.width = '100%';
+    cameraVideo.style.height = '100%';
+    
+    // Nếu zoom < 1 (muốn góc rộng): dùng contain để thấy toàn bộ chiều ngang video
+    // Nếu zoom >= 1 (muốn zoom cận): dùng cover và scale lên
+    if (currentZoom < 1) {
+        cameraVideo.style.objectFit = 'contain';
+    } else {
+        cameraVideo.style.objectFit = 'cover';
+    }
 
-    cameraVideo.style.width = sizePct + '%';
-    cameraVideo.style.height = sizePct + '%';
-    cameraVideo.style.objectFit = 'cover';
     cameraVideo.style.position = 'absolute';
     cameraVideo.style.left = '50%';
     cameraVideo.style.top = '50%';
-    cameraVideo.style.transform = `translate(-50%, -50%) scale(${scaleX}, ${currentZoom})`;
+
+    // Với zoom < 1, do dùng contain đã lấy được góc rộng nhất, ta giữ scale = 1 
+    // để ảnh ko bị thu nhỏ thêm tạo viền đen 4 phía.
+    const actualScale = currentZoom < 1 ? 1 : currentZoom;
+    const scaleX = isMirrorMode ? -actualScale : actualScale;
+
+    cameraVideo.style.transform = `translate(-50%, -50%) scale(${scaleX}, ${actualScale})`;
 
     if (bgCanvas) {
-        bgCanvas.style.width = sizePct + '%';
-        bgCanvas.style.height = sizePct + '%';
+        bgCanvas.style.width = '100%';
+        bgCanvas.style.height = '100%';
+        bgCanvas.style.objectFit = currentZoom < 1 ? 'contain' : 'cover';
         bgCanvas.style.position = 'absolute';
         bgCanvas.style.left = '50%';
         bgCanvas.style.top = '50%';
-        bgCanvas.style.transform = `translate(-50%, -50%) scale(${scaleX}, ${currentZoom})`;
+        bgCanvas.style.transform = `translate(-50%, -50%) scale(${scaleX}, ${actualScale})`;
     }
 
     if (isMirrorMode) {
