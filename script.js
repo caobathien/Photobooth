@@ -238,6 +238,7 @@ function selectThemeLayout(layoutId) {
     if (layoutId === '2-strip' || layoutId === '4-strip' || layoutId === '2x2-grid') {
         selectedTheme = null;
         selectedLayout = layoutId;
+        frameBg = '#ffffff'; // Reset background
         if (layoutId === '2-strip') maxImages = 2;
         else if (layoutId === '4-strip') maxImages = 4;
         else if (layoutId === '2x2-grid') maxImages = 4;
@@ -264,6 +265,7 @@ function selectThemeLayout(layoutId) {
         };
         selectedLayout = 'polaroid';
         maxImages = 1;
+        frameBg = '#fbfbf9';
         
         document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
         const cardEl = document.querySelector(`.card[data-layout="${layoutId}"]`);
@@ -286,6 +288,7 @@ function selectThemeLayout(layoutId) {
         };
         selectedLayout = '3-strip';
         maxImages = 3;
+        frameBg = '#ffffff';
         
         document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
         const cardEl = document.querySelector(`.card[data-layout="${layoutId}"]`);
@@ -307,6 +310,7 @@ function selectThemeLayout(layoutId) {
     selectedTheme = { ...theme, id: layoutId };
     selectedLayout = theme.baseLayout;
     maxImages = theme.photoCount;
+    frameBg = selectedTheme.bg || '#ffffff';
     
     document.querySelectorAll('.card').forEach(card => card.classList.remove('selected'));
     const cardEl = document.querySelector(`.card[data-layout="${layoutId}"]`);
@@ -1594,7 +1598,8 @@ async function renderPhotobooth() {
     interactiveLayer.style.transform = `translate(-50%, -50%) scale(${scale})`;
     
     // 1. Draw Background Frame
-    const bgToUse = selectedTheme ? selectedTheme.bg : frameBg;
+    // Luôn ưu tiên dùng frameBg (do user chọn hoặc lấy mặc định từ theme)
+    const bgToUse = frameBg;
     
     if (bgToUse.startsWith('linear-gradient')) {
         const gradient = ctx.createLinearGradient(0, 0, width, height);
