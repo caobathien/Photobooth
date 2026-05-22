@@ -2112,6 +2112,9 @@ function centerSelectedElement() {
 }
 
 function handleDragStart(e) {
+    // Ignore touch events here — handled by dedicated touch handlers
+    if (e.pointerType === 'touch') return;
+    
     const target = e.target;
     
     if (target.classList.contains('resize-handle')) {
@@ -2154,7 +2157,6 @@ function handleDragStart(e) {
         
         try { interactiveLayer.setPointerCapture(e.pointerId); } catch (err) {}
         
-        // Save scroll position before fixing body
         savedScrollY = window.scrollY;
         document.body.classList.add("dragging-canvas");
         document.body.style.top = `-${savedScrollY}px`;
@@ -2181,6 +2183,7 @@ function requestRender() {
 }
 
 function handleDragMove(e) {
+    if (e.pointerType === 'touch') return; // handled by touch handlers
     if (selectedElementIndex === -1 || !actionType) return;
     if (activePointerId !== null && activePointerId !== e.pointerId) return;
     
@@ -2197,7 +2200,6 @@ function handleDragMove(e) {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
         
-        // NO clamping - allow dragging outside canvas
         el.x = x - dragOffsetX;
         el.y = y - dragOffsetY;
         
@@ -2220,6 +2222,7 @@ function handleDragMove(e) {
 }
 
 function handleDragEnd(e) {
+    if (e.pointerType === 'touch') return; // handled by touch handlers
     if (isDragging || actionType) {
         e.preventDefault();
         e.stopPropagation();
@@ -2227,7 +2230,6 @@ function handleDragEnd(e) {
             if (activePointerId !== null) interactiveLayer.releasePointerCapture(activePointerId);
         } catch (err) {}
         
-        // Restore scroll position
         document.body.classList.remove("dragging-canvas");
         document.body.style.top = '';
         window.scrollTo(0, savedScrollY);
@@ -2241,89 +2243,90 @@ function handleDragEnd(e) {
     activePointerId = null;
 }
 
-// ================= TOUCH EVENT FALLBACK FOR MOBILE =================
-// Some older mobile browsers may not properly support pointer events
-// on absolutely-positioned overlay layers. This fallback ensures drag works.
+// ================= TOUCH EVENTS FOR MOBILE DRAG =================
+// Dedicated touch handlers that run ALWAYS on mobile
 function setupTouchFallback() {
-    // Only add touch fallback if pointer events might not work properly
-    let pointerEventWorks = false;
+    // interactiveLayer phủ lên canvas, mọi touch sẽ đến đây trước
+    interactiveLayer.addEventListener('touchstart', handleTouchStart, { passive: false });
+    interactiveLayer.addEventListener('touchmove', handleTouchMove, { passive: false });
+    interactiveLayer.addEventListener('touchend', handleTouchEnd, { passive: false });
+    interactiveLayer.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+}
+
+function getTouchLayerPos(touch) {
+    const rect = interactiveLayer.getBoundingClientRect();
+    const scaleX = interactiveLayer.offsetWidth / rect.width;
+    const scaleY = interactiveLayer.offsetHeight / rect.height;
+    return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY
+    };
+}
+
+function handleTouchStart(e) {
+    // Chỉ xử lý single touch cho drag
+    if (e.touches.length !== 1) return;
     
-    // Test if pointer events fired on first interaction
-    interactiveLayer.addEventListener('pointerdown', function onceTest() {
-        pointerEventWorks = true;
-        interactiveLayer.removeEventListener('pointerdown', onceTest);
-    }, { once: true });
+    const touch = e.touches[0];
+    const pos = getTouchLayerPos(touch);
     
-    // Fallback: Also listen on finalCanvas for touch events
-    finalCanvas.addEventListener('touchstart', function(e) {
-        if (pointerEventWorks) return; // Pointer events work, skip touch fallback
+    const elementIndex = getElementAtPosition(pos.x, pos.y);
+    
+    if (elementIndex !== -1) {
         e.preventDefault();
+        e.stopPropagation();
         
-        const touch = e.touches[0];
-        if (!touch) return;
-        
-        const rect = interactiveLayer.getBoundingClientRect();
-        const scaleX = interactiveLayer.offsetWidth / rect.width;
-        const scaleY = interactiveLayer.offsetHeight / rect.height;
-        
-        const x = (touch.clientX - rect.left) * scaleX;
-        const y = (touch.clientY - rect.top) * scaleY;
-        
-        const elementIndex = getElementAtPosition(x, y);
-        
-        if (elementIndex !== -1) {
-            actionType = 'drag';
-            selectedElementIndex = elementIndex;
-            isDragging = true;
-            
-            const el = draggableElements[selectedElementIndex];
-            dragOffsetX = x - el.x;
-            dragOffsetY = y - el.y;
-            
-            savedScrollY = window.scrollY;
-            document.body.classList.add("dragging-canvas");
-            document.body.style.top = `-${savedScrollY}px`;
-            
-            selectElement(selectedElementIndex);
-        } else {
-            selectElement(-1);
-        }
-    }, { passive: false });
-    
-    finalCanvas.addEventListener('touchmove', function(e) {
-        if (pointerEventWorks) return;
-        if (selectedElementIndex === -1 || !actionType) return;
-        
-        e.preventDefault();
-        
-        const touch = e.touches[0];
-        if (!touch) return;
+        actionType = 'drag';
+        selectedElementIndex = elementIndex;
+        isDragging = true;
         
         const el = draggableElements[selectedElementIndex];
-        const rect = interactiveLayer.getBoundingClientRect();
-        const scaleX = interactiveLayer.offsetWidth / rect.width;
-        const scaleY = interactiveLayer.offsetHeight / rect.height;
+        dragOffsetX = pos.x - el.x;
+        dragOffsetY = pos.y - el.y;
         
-        const x = (touch.clientX - rect.left) * scaleX;
-        const y = (touch.clientY - rect.top) * scaleY;
+        savedScrollY = window.scrollY;
+        document.body.classList.add('dragging-canvas');
+        document.body.style.top = `-${savedScrollY}px`;
+        finalCanvas.classList.add('dragging');
+        interactiveLayer.classList.add('dragging');
         
-        el.x = x - dragOffsetX;
-        el.y = y - dragOffsetY;
-        
-        requestRender();
-    }, { passive: false });
+        selectElement(selectedElementIndex);
+    } else {
+        // Chạm vào vùng trống => bỏ chọn
+        selectElement(-1);
+    }
+}
+
+function handleTouchMove(e) {
+    if (!isDragging || selectedElementIndex === -1 || actionType !== 'drag') return;
+    if (e.touches.length !== 1) return;
     
-    finalCanvas.addEventListener('touchend', function(e) {
-        if (pointerEventWorks) return;
-        if (!isDragging && !actionType) return;
-        
-        document.body.classList.remove("dragging-canvas");
-        document.body.style.top = '';
-        window.scrollTo(0, savedScrollY);
-        
-        isDragging = false;
-        actionType = null;
-    }, { passive: false });
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const touch = e.touches[0];
+    const pos = getTouchLayerPos(touch);
+    
+    const el = draggableElements[selectedElementIndex];
+    el.x = pos.x - dragOffsetX;
+    el.y = pos.y - dragOffsetY;
+    
+    requestRender();
+}
+
+function handleTouchEnd(e) {
+    if (!isDragging && !actionType) return;
+    
+    e.preventDefault();
+    
+    document.body.classList.remove('dragging-canvas');
+    document.body.style.top = '';
+    window.scrollTo(0, savedScrollY);
+    finalCanvas.classList.remove('dragging');
+    interactiveLayer.classList.remove('dragging');
+    
+    isDragging = false;
+    actionType = null;
 }
 
 // ================= HIGH RES EXPORT =================
